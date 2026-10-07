@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crossword-poster"
+dynamic = ["version"]
+description = "Turn a spreadsheet of clues and answers into a print-ready, newspaper-style crossword poster."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
+authors = [{ name = "Faramarz", email = "gm@faramarz.xyz" }]
+keywords = ["crossword", "poster", "puzzle", "pdf", "birthday", "gift", "print", "playwright"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+    "Topic :: Printing",
+]
+dependencies = [
+    "playwright>=1.40",
+    "pypdf>=4.2",
+    "pypdfium2>=4.25",
+    "pillow>=10.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+xlsx = ["openpyxl>=3.1"]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.6",
+    "build>=1.0",
+    "openpyxl>=3.1",
+    "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/faramarz/crossword-poster"
+Repository = "https://github.com/faramarz/crossword-poster"
+Issues = "https://github.com/faramarz/crossword-poster/issues"
+
+[project.scripts]
+crossword-poster = "crossword_poster.cli:main"
+
+[tool.hatch.version]
+path = "crossword_poster/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["crossword_poster"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/crossword_poster",
+    "/tests",
+    "/examples",
+    "/docs",
+    "/scripts",
+    "/LICENSE",
+    "/THIRD_PARTY_LICENSES.md",
+    "/README.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["e2e: end-to-end tests that need Playwright's Chromium (skipped when it cannot start)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM"]
+ignore = [
+    "E501",    # line length is handled by the formatter; long help strings are fine
+    "UP007",   # keep typing.Optional / Union: the package supports Python 3.9
+    "UP045",
+    "SIM108",
+    "C408",    # dict(a=1) keyword form is used deliberately for readability
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.ruff.format]
+quote-style = "double"

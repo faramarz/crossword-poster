@@ -1,2 +1,5 @@
-"""crossword_poster: freeform crossword generator + newspaper-style poster renderer."""
-__version__ = "0.1.0"
+"""crossword_poster: turn a CSV of clues and answers into a print-ready newspaper-style crossword poster."""
+
+__version__ = "1.0.0"
+
+__all__ = ["__version__"]

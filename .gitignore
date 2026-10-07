@@ -1,6 +1,8 @@
 # build products
 out/
+sample-poster/
 build/
+dist/
 .build/
 *.pdf
 !docs/*.pdf
@@ -11,14 +13,11 @@ data/*
 *.private.*
 *.private/
 
-# fonts fetched by scripts/fetch_fonts.sh (Reserved Font Name families are not redistributed here)
-fonts/PlayfairDisplay/
-fonts/SourceSerif4/
-
 # python / tooling
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 .venv/
 venv/
 *.egg-info/

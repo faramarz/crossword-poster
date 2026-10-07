@@ -1,7 +1,0 @@
-# Python 3.9+
-playwright>=1.40     # drives headless Chromium to lay out and print the poster to PDF
-pymupdf>=1.23        # PNG previews, verification, actual-size check page
-pillow>=10.0         # crop montages in verify / crops
-numpy>=1.24          # pixel checks in verify / crops
-# only for scripts/fetch_fonts.sh (Playfair Display / Source Serif 4 for the classic renderer):
-# fonttools>=4.40
