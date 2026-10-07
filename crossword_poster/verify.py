@@ -18,6 +18,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from collections import Counter
 from typing import Optional
 
@@ -39,8 +40,40 @@ def hex_rgb(h: str) -> tuple:
     return tuple(round(int(h[i : i + 2], 16) / 255, 3) for i in (0, 2, 4))
 
 
-def _squeeze(text: str) -> str:
-    return re.sub(r"\s+", "", text)
+_DASHES = dict.fromkeys(map(ord, "-\u00ad\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufffe"))  # deleted
+_QUOTES = {
+    **{ord(c): "'" for c in "\u2018\u2019\u201a\u201b\u2032\u02bc\u0060\u00b4"},
+    **{ord(c): '"' for c in "\u201c\u201d\u201e\u201f\u2033"},
+}
+PREFIX_LEN = 60  # characters of a clue that must match when the whole clue does not (see _occurrences)
+
+
+def normalise_text(text: str) -> str:
+    """Text in a form that survives being printed and read back out of a PDF.
+
+    Chromium and pdfium may change ligatures (fi), quotes (curly or straight), dashes, the hyphen at a wrapped line
+    (pdfium writes it as U+FFFE) and the length of a run of underscores, and they turn line breaks into spaces or
+    nothing. So: Unicode compatibility form, quotes to straight, every dash and hyphen removed, runs of ``_`` made
+    one, and all whitespace removed.
+    """
+    t = unicodedata.normalize("NFKC", text).translate(_DASHES).translate(_QUOTES)
+    return re.sub(r"_+", "_", re.sub(r"[\s\u200b\ufeff\ufffe]+", "", t))  # a blank may wrap: join, then collapse
+
+
+_squeeze = normalise_text
+
+
+def _occurrences(text: str, needle: str) -> int:
+    """How often the normalised ``needle`` (a clue with its number) occurs in the normalised page ``text``.
+
+    A clue that wraps across lines or columns can come out slightly differently, so when the whole clue is not found
+    the first PREFIX_LEN characters are counted instead. They include the clue number, so another clue cannot match.
+    """
+    pattern = r"(?<!\d)" + re.escape(needle)
+    found = len(re.findall(pattern, text))
+    if not found and len(needle) > PREFIX_LEN:
+        found = len(re.findall(r"(?<!\d)" + re.escape(needle[:PREFIX_LEN]), text))
+    return found
 
 
 class Report:
@@ -114,7 +147,7 @@ def _check_poster(rep: Report, d: str, tag: str, trim: tuple, var: str, ctx: dic
     want = Counter(_squeeze(f"{n} {t}") for n, t in ctx["want"])
     bad = []
     for needle, expected in want.items():
-        found = len(re.findall(r"(?<!\d)" + re.escape(needle), text))
+        found = _occurrences(text, needle)
         if found != expected:
             bad.append((needle[:40], found, expected))
     rep.check(not bad, f"{tag}: all {len(ctx['want'])} clues appear exactly once (problems: {bad[:5]})")

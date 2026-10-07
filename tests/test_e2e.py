@@ -236,3 +236,40 @@ def test_a_browser_context_is_offline_but_still_opens_local_pages(tmp_path):
         reachable = pg.evaluate("fetch('https://example.com/').then(()=>true,()=>false)")
         pg.close()
     assert reachable is False
+
+
+def test_clues_that_wrap_at_a_hyphen_are_still_found_in_the_pdf_text(tmp_path):
+    """Real Chromium and pdfium: sweep column widths so that each clue breaks after its hyphen at least once."""
+    from crossword_poster.common import browser_context
+    from crossword_poster.verify import normalise_text
+
+    clues = ["12 Sam's favourite UK-based airline (7,7)", "142 Guilty-pleasure TV show: Friends of ____ (6)"]
+    wrapped_at_hyphen = 0
+    with browser_context() as ctx:
+        for clue in clues:
+            for tenths in range(8, 40):
+                pg = ctx.new_page()
+                pg.set_content(
+                    f"<body style='margin:0'><div style='width:{tenths / 10}in;font:12pt Arial,sans-serif'>{clue}</div></body>"
+                )
+                pdf = tmp_path / "t.pdf"
+                pdf.write_bytes(pg.pdf(width="4in", height="3in"))
+                pg.close()
+                raw = pdfutil.page_text(pdf)
+                wrapped_at_hyphen += "￾" in raw
+                assert normalise_text(clue) in normalise_text(raw), (tenths, repr(raw))
+    if not wrapped_at_hyphen:
+        pytest.skip("this pdfium never wrapped a clue at its hyphen, so the case was not exercised")
+
+
+def test_a_build_with_hyphenated_and_blank_clues_passes_every_check(tmp_path, capsys):
+    rows = [
+        *SMALL_ROWS,
+        ("Sam's favourite UK-based airline", "British Airways"),
+        ("Guilty-pleasure TV show: Friends of ____", "Sitcom"),
+    ]
+    path = write_csv(tmp_path / "wrap.csv", rows)
+    code = cli.main(["build", "--clues", str(path), "--size", "18x24", "--out", str(tmp_path / "o"), "--no-crops"])
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "Output checks: all passed" in out
