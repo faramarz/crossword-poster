@@ -1,0 +1,25 @@
+# build products
+out/
+build/
+.build/
+*.pdf
+!docs/*.pdf
+
+# private data: put your own clue CSVs in data/ (see data/README.md)
+data/*
+!data/README.md
+*.private.*
+*.private/
+
+# fonts fetched by scripts/fetch_fonts.sh (Reserved Font Name families are not redistributed here)
+fonts/PlayfairDisplay/
+fonts/SourceSerif4/
+
+# python / tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.DS_Store
