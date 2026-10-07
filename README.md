@@ -1,191 +1,180 @@
+<div align="center">
+
 # crossword-poster
 
-Turn a spreadsheet of clues and answers into a large-format **newspaper-style crossword poster**, ready to print.
+**Turn a list of clues from friends and family into a print-ready crossword poster.**
 
-Give it a CSV with one clue and one answer per row. It builds a free-form (loose, "barred-free") crossword grid in which
-**every one of your answers is used**, validates it, lays the poster out in Chromium, and writes print-ready PDFs
-(with and without bleed), a PNG preview, an 11x17 answer key, a letter-size solution sheet and a 100%-scale
-"actual size" check page you can print on a desktop printer before ordering the big print.
+[![CI](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml/badge.svg)](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Python 3.9 to 3.13](https://img.shields.io/badge/python-3.9%20to%203.13-blue.svg)](pyproject.toml)
 
-![Sample poster, 18x24, black](docs/sample_18x24_black.png)
+<img src="docs/sample_24x36_grey.png" alt="A sample 24 by 36 inch crossword poster with grey blocks, a bold title and four columns of clues under the grid" width="520">
 
-*The sample above is built from the fictional birthday clues in `examples/sample_birthday.csv` ("Alex's 50th"):
-18x24 in, solid black blocks. Below: the same data at 24x36 in with grey blocks, which saves ink.*
+<img src="docs/sample_solution.png" alt="The matching answer sheet: the same grid with every answer filled in" width="340">
 
-![Sample poster, 24x36, grey](docs/sample_24x36_grey.png)
+*A fictional sample ("Alex's 50th"), built from [`examples/sample_birthday.csv`](examples/sample_birthday.csv). Left to right: the poster, then its answer sheet.*
 
-## Features
+</div>
 
-- One command, end to end: pool -> grid -> validate -> render -> verify.
-- Every answer is placed when possible: the generator searches many randomized layouts and keeps the most compact complete one; if none exists it says which answers were left out.
-- Any trim size (tuned for 18x24, 24x36 and 36x48 in; others are scaled), 0.125 in bleed, trim-size PDF, PNG preview.
-- Layout fit loop: finds the largest box size that still lets all clues fit at a readable size, wrapping clue columns
-  beside the grid when that gives bigger boxes.
-- Variants: solid black, grey (ink saving), or black with reversed-out spot icons; `--block-fill` for any colour.
-- Extras: answer key (11x17), solution sheet (letter), actual-size check page, independent grid validator, output
-  verifier (page sizes, embedded fonts, colours, margins, every clue exactly once, per-cell strokes).
+---
 
-## Install
+## Why this exists
 
-```bash
-pip install git+https://github.com/faramarz/crossword-poster
-python -m playwright install chromium     # one-time download of the browser that prints the poster
-crossword-poster doctor                   # checks Python, fonts and Chromium, and tells you how to fix anything
-```
+I built this to make a crossword poster for a family member's 50th birthday. Friends and family sent in clues and
+answers about the guest of honour: shared jokes, old trips, favourite foods. I wanted every one of those answers on the
+poster, printed large enough to hang on a wall and fill in with a pen at the party. It worked, and people loved it. I am
+sharing the tool so you can do the same for your own birthday, anniversary, retirement or reunion.
 
-Python 3.9+. **Chromium is required** for layout and PDF output. Set `CROSSWORD_POSTER_CHROMIUM` to the path of an
-existing Chromium/Chrome to use that instead. The fonts (Archivo Narrow, Oswald, SIL OFL) ship inside the package.
-For `.xlsx` clue files: `pip install "crossword-poster[xlsx]"`. Licences: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+You do not need to be a programmer. The [step-by-step guide](docs/GUIDE.md) starts from zero and covers collecting clues,
+installing the tool, printing, and the party itself.
+
+## What you get
+
+Give it a spreadsheet with a **clue** column and an **answer** column. It writes these files:
+
+| File | What it is for |
+|---|---|
+| `poster_24x36_grey_bleed.pdf` | **Send this to the print shop.** The poster plus 0.125 in of bleed (extra edge the shop trims off). |
+| `poster_24x36_grey_trim.pdf` | The same poster at exactly its final size, for shops that add their own bleed. |
+| `poster_24x36_grey_preview.png` | A picture of the poster to look at or share. |
+| `answer_key_24x36_11x17.pdf` | The finished poster shrunk onto 11x17 in paper with every answer filled in. Keep it for the host. |
+| `answer_sheet_letter.pdf` and `.png` | The filled grid on one letter page. Print it at home. |
+| `actual_size_check_24x36.pdf` | A letter page printed at 100% scale. Shows the real square size and clue type, so you can judge them before paying for the big print. |
+| `clues_and_answers.csv` | A numbered list of every clue and answer. Use it to proofread. |
+| `details/` | Working files. You can ignore them. |
+
+(File names change with your poster size and style. `grey` is the default style.)
 
 ## Quick start
 
-```bash
-crossword-poster sample --out my-first-poster          # builds the bundled birthday example
-crossword-poster template my_clues.csv                 # a starter file to fill in
-crossword-poster build --clues my_clues.csv --title "Sam's 50th" --subtitle "From everyone who loves you" \
-    --size 24x36 --style grey --out poster/
-```
+You need Python 3.9 or newer. New to the terminal? Follow the [beginner guide](docs/GUIDE.md#4-install-the-tool) instead,
+which has exact steps for macOS, Windows and Linux.
 
-Results appear in `poster/`:
-
-```
-poster_24x36_grey_bleed.pdf        print this one: trim + 0.125 in bleed on every side
-poster_24x36_grey_trim.pdf         exactly 24 x 36 in, for printers that add their own bleed
-poster_24x36_grey_preview.png      picture preview
-answer_key_24x36_11x17.pdf         the poster scaled to 11x17 with the answers filled in
-answer_sheet_letter.pdf  .png      letter-size filled grid
-actual_size_check_24x36.pdf        letter page: print at 100% to judge the real box and type sizes
-clues_and_answers.csv              numbered list of every clue and answer
-details/                           working files: grid.json, pool_report.json, per-size folders, checks/
-```
-
-The run ends with a summary: the files written, the square size in inches and mm, the clue font size, and any answers
-that could not be placed. Styles: `grey` (default), `black`, `icons` (black with a cake and party hat), or `all`.
-Several sizes in one go: `--size 18x24,24x36,36x48`. `scripts/build_all.sh CLUES.csv OUT` builds every size and style.
-
-### Your own clues
-
-Put private data in `data/` (gitignored; see [data/README.md](data/README.md)):
+**1. Install** (an isolated install with [pipx](https://pipx.pypa.io/) or [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-crossword-poster build --clues data/my_clues.csv --clue-column Clue --answer-column Answer \
-    --id-column No --size 24x36 --style black --title "Pub Quiz" --subtitle "Questions from the quiz team" --out out/
+# with pipx
+pipx install git+https://github.com/faramarz/crossword-poster
+pipx run --spec git+https://github.com/faramarz/crossword-poster playwright install chromium
+
+# or with uv
+uv tool install --with-executables-from playwright git+https://github.com/faramarz/crossword-poster
+playwright install chromium
 ```
 
-Input: a CSV (UTF-8 with or without BOM, or Excel's CSV; `.xlsx` with the extra) with a header row. The clue and answer
-columns are found by name, case-insensitively (`clue`/`clues`/`question`, `answer`/`answers`/`word`); optional columns
-are `id` and `enumeration`. Blank rows are skipped; rows with a missing clue or answer are listed by row number. The
-grid word is the answer folded to A-Z (`BIGBEE` style, accents and punctuation dropped); multi-word answers get an
-enumeration such as `(3,3)` unless the clue already has one. Answers with digits or other alphabets, shorter than 2 or
-longer than 20 letters (`--min-len/--max-len`) are skipped with an explanation; duplicate answers keep the first.
-If not every answer fits, the search retries with more attempts and a bigger window, then builds the poster without
-the leftovers and lists them (`--require-all` turns that into an error). Clue text is always printed literally.
+No Git on your computer? Replace `git+https://github.com/faramarz/crossword-poster` with
+`https://github.com/faramarz/crossword-poster/archive/refs/heads/main.zip`.
 
-### Running the steps individually
+The second line in each pair downloads Chromium, the browser the tool uses to lay out and print the poster. You do it
+once. It is a download of a few hundred megabytes.
+
+<details>
+<summary>Plain pip in a virtual environment instead</summary>
 
 ```bash
-crossword-poster pool      --clues my_clues.csv --out out/pool.csv
-crossword-poster generate  --csv out/pool.csv --all --attempts 2000 --seed 1 --workers 4 --clue-column clue --out-json out/raw.json
-crossword-poster validate  out/details/grid.json --pool out/details/pool.csv
-crossword-poster render    out/details/grid.json --trim 24x36 --outroot out/details --make A,C,key --title "My Crossword"
-crossword-poster render    out/details/grid.json --solution --outroot out/details --title "My Crossword"
-crossword-poster actual-size --from-fit out/details/24x36 --variant A_black --title "My Crossword"
-crossword-poster verify    out/details --title "My Crossword"
-crossword-poster transpose out/details/grid.json out/transposed      # wide <-> tall layout
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install git+https://github.com/faramarz/crossword-poster
+python -m playwright install chromium
 ```
 
-`generate` alone writes only the bare grid; `build` attaches the clues and writes `details/grid.json`, which `validate`,
-`render` and `verify` expect. `python -m crossword_poster ...` is equivalent to `crossword-poster ...`.
+</details>
 
-## CLI reference
+Check that everything works:
 
-`crossword-poster --help` lists the commands; `crossword-poster <command> --help` shows every option. Exit status:
-0 success, 1 built but needs attention (checks failed, or `--require-all` with leftovers), 2 problem with the input or
-options, 3 the computer is missing something (Chromium; run `doctor`).
+```bash
+crossword-poster doctor
+```
 
-| Command | Purpose |
+**2. See what it makes.** This builds the fictional sample in about 15 seconds:
+
+```bash
+crossword-poster sample --out my-first-poster
+```
+
+**3. Make your own.**
+
+```bash
+crossword-poster template my_clues.csv        # a starter file; open it in Excel or Google Sheets
+crossword-poster build --clues my_clues.csv --title "Sam's 50th Birthday" \
+    --subtitle "Clues from everyone who loves you" --size 24x36 --style grey --out poster/
+```
+
+The run ends with a plain-language summary: the files written, the size of each square, the clue type size, and any
+answers that did not fit.
+
+## Features
+
+- **Every answer is used.** The grid generator searches many layouts and keeps the most compact one that holds all of your answers. If one cannot cross any other, it tells you which and why.
+- **Made for printing.** Real vector PDFs with embedded fonts, 0.125 in bleed, and a trim-size copy.
+- **Any poster size.** Tuned for 18x24, 24x36 and 36x48 inches. Other sizes (A2, A1, landscape) are scaled from the nearest one.
+- **Three styles.** `grey` saves ink and is easy to write on. `black` is bold. `icons` is black with a cake and a party hat. Pick any colour with `--block-fill`.
+- **A fit loop.** It picks the largest squares that still let every clue appear at a readable size.
+- **A size check before you pay.** The actual-size page shows real squares and real type on your desk printer.
+- **Checks you do not have to do by hand.** An independent validator re-derives the grid from its letters. A verifier checks page sizes, embedded fonts, colours, margins and that every clue appears exactly once.
+- **Friendly errors.** Mistakes in your file or setup get a plain message and a "how to fix" line, not a traceback.
+- **Private and offline.** Everything runs on your computer. Nothing is uploaded.
+- **Open and tested.** MIT licence, bundled open fonts, unit tests, end-to-end tests with real Chromium, CI on Linux, macOS and Windows.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Your clues<br/>(CSV file)"] --> B["Clean and check<br/>fold accents, add lengths,<br/>flag duplicates and problems"]
+    B --> C["Grid generator<br/>many layouts, keep the<br/>most compact complete one"]
+    C --> D["Validator<br/>re-derives the grid<br/>from its letters"]
+    D --> E["Layout and print<br/>fit loop in headless<br/>Chromium"]
+    E --> F["PDFs, PNGs and<br/>answer sheet"]
+    F --> G["Output checks<br/>sizes, fonts, colours,<br/>every clue once"]
+```
+
+Developers: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Command cheat sheet
+
+| I want to... | Run |
 |---|---|
-| `build` | the whole pipeline (see `build --help`: `--clues --title --subtitle --size --style --out --seed --require-all` plus reading, search, look and skip options) |
-| `sample` | build the bundled fictional birthday crossword (`--out --size --style --seed`) |
-| `template OUT.csv` | write a starter clues file |
-| `doctor` | check Python, libraries, fonts and Chromium |
-| `pool`, `generate`, `validate`, `render`, `verify`, `actual-size`, `crops`, `transpose` | single stages for power users |
+| Check my computer is ready | `crossword-poster doctor` |
+| See an example | `crossword-poster sample --out my-first-poster` |
+| Get a starter clues file | `crossword-poster template my_clues.csv` |
+| Build a poster | `crossword-poster build --clues my_clues.csv --title "Title" --out poster/` |
+| Choose a size | add `--size 18x24` (or `24x36`, `36x48`, `16.5x23.4` for A2, `36x24` for landscape) |
+| Choose a style | add `--style grey`, `black`, `icons` or `all` |
+| Build several sizes at once | add `--size 18x24,24x36` |
+| Get a different layout | add `--seed 2` |
+| Stop if any answer does not fit | add `--require-all` |
+| Use my own column names | add `--clue-column Question --answer-column Word` |
+| See every option | `crossword-poster build --help` |
 
-## Design notes
+Full reference with every option, exit code and the CSV format: [docs/CLI.md](docs/CLI.md).
 
-**Newspaper layout.** A full-width header carries a heavy condensed title (Oswald Bold, auto-sized to the widest size that
-still leaves room for the byline) over a rule. The grid is a solid-fill rectangle: every cell that is not part of a word
-is a filled block, so the grid reads as one bold shape and prints cleanly. Letter cells have a 0.75-1.5 pt outline
-(never below 0.5 pt, which the verifier enforces) and a heavy outer frame. Clues are set in Archivo Narrow in columns of
-one width and one gutter, "poured" top to bottom. A heading never sits alone at the foot of a column, and a clue is never
-split between columns. Slack at the foot of each column is spread between clues so the columns end level.
+## Questions people ask
 
-**Fit loop.** For each candidate number of text columns and grid width the layout code computes the box size, then
-bisects for the largest clue font (and line height) at which every clue still fits. It prefers the largest boxes and,
-among near-equal choices, the larger type. A few dozen clues on a very large trim will hit the font ceiling and leave
-white space at the bottom: use a smaller trim or add clues.
+- **Do I need to know how to code?** No. Follow the [beginner guide](docs/GUIDE.md).
+- **How many clues should I use?** About 30 to 60 for a 24x36 poster. See the [table in the guide](docs/GUIDE.md#how-many-clues-fit-each-poster-size).
+- **Can answers have spaces or accents?** Yes. `Big Ben` becomes `BIGBEN` and the clue gets `(3,3)`. `Café` becomes `CAFE`. Digits are not allowed: spell numbers out.
+- **Is my data private?** Yes. Nothing leaves your computer.
+- **Something broke.** Run `crossword-poster doctor`, then see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-**Bleed, trim and files.** `poster.pdf` is trim + 0.125 in bleed on every side (the block fill and white background run
-into the bleed); `poster_trim.pdf` is exactly the trim size for print shops that add their own bleed. Content stays at
-least 0.5 in inside the trim (more on 36x48). All fonts are embedded as real TrueType (never Type 3).
+## Contributing
 
-**Black-and-white and grayscale printing tips.**
-- Matte paper (or matte poster stock) keeps glare off a large black-and-white sheet and hides fingerprints. Satin or
-  gloss shows reflections and banding in big solid areas.
-- Large flooded black can print streaky or take a long time to dry on some wide-format inkjets. The grey style
-  (`--style grey`) uses far less ink and is easier to write on with a pen; `--block-fill` lets you pick the exact tone.
-- Ask the shop to print in grayscale / black-only mode and to **not** colour-manage, so there is no colour cast on the greys.
-- Send `poster.pdf` (with bleed) unless they ask for the trim file; check the size in the PDF viewer
-  (File > Properties) before paying. `verify` does this check for you.
-- Print `actual_size_check_letter.pdf` at 100% ("Actual size", never "Fit to page"): the bar must measure exactly one inch,
-  and the two windows show real boxes and real clue type, so you can judge legibility from arm's length.
-- `key.pdf` is the finished poster scaled onto 11x17 with the answers filled in.
-
-**Generator.** `generate.py` is standard-library only. A sparse board holds placed words. To place a word it finds every cell
-that already holds one of its letters and tries to cross there; a placement is legal only if the word's ends are bounded by
-an empty cell or the window edge, no new cell touches another word sideways, letters agree where words cross, and a cell is
-used by at most one Across and one Down word. Among legal crossings it prefers the one with the most crossings, then the
-smallest bounding box, with a random tie-break. One attempt orders the words longest first with random noise, places the
-first one centred, and makes several passes over the leftovers. In the default mode the best of N attempts by score
-(`words*100 + 40*density + 10*crossings per word`) wins and `--required` words must be present. With `--all`, an attempt only counts if it placed
-every word; the smallest bounding box among complete layouts wins. Attempt *k* of seed *s* is seeded by `(s, k)`, so the result
-does not depend on the worker count. When no window is given it is estimated (area ~ letters / 0.4 x 1.3, aspect `--aspect`)
-and enlarged until a complete layout exists. The independent validator re-derives every run, number and clue link from the
-letters alone.
-
-## Limitations
-
-- Free-form layout only: no rotational symmetry, no black-square patterns, no dictionary fill. Answers are placed as given,
-  so very short or letter-poor answers (few vowels) cross less and need more attempts.
-- Answers are folded to A-Z; other scripts are not supported. Length 2-20 letters by default.
-- Clues are not rewritten. The giveaway check is a whole-word match only; check that clues are clues, not answers.
-- Needs Chromium (Playwright) for layout; layout is tuned for Latin text in Archivo Narrow / Oswald.
-- The fit loop optimises box size first. With few clues on a large trim you get large boxes and empty space at the foot; with
-  very many clues, type gets small (the minimum font is per size: 11 pt at 24x36). Clue text is never truncated or split;
-  if nothing fits, rendering stops with `FIT FAILED`.
-- The `icons` style draws a cake and a party hat; other artwork needs code changes (`pick_icons` / `icon` in `render_news.py`).
-- Print-shop colour handling is outside the tool's control; always run the actual-size check and order a small proof.
-
-## Tests
-
-```bash
-pip install -e ".[dev]"
-pytest -m "not e2e"     # fast unit tests
-pytest                  # also the end-to-end tests (needs Chromium; skipped if it cannot start)
-ruff check . && ruff format --check .
-```
-
-## Repository layout
-
-```
-crossword_poster/   package: cli, pipeline, pool, generate, validate, render_news, actual_size, verify, crops, pdfutil, ...
-crossword_poster/fonts/    bundled OFL fonts and licence texts      crossword_poster/samples/   bundled sample clues
-examples/           sample_birthday.csv (fictional), sample_clues.csv (generic trivia)
-scripts/            build_all.sh, build_sample.sh, check_licenses.sh
-docs/               preview images, ARCHITECTURE.md
-tests/              pytest suite
-```
+Bug reports, new sizes, new styles and doc fixes are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). Please read
+the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md](SECURITY.md). Questions and ideas go to
+[Discussions](https://github.com/faramarz/crossword-poster/discussions).
 
 ## Licence
 
-Code: MIT (see `LICENSE`). Fonts: SIL Open Font License 1.1, see `crossword_poster/fonts/<Family>/OFL.txt`. Dependencies: see `THIRD_PARTY_LICENSES.md`.
+The code is released under the [MIT licence](LICENSE). The bundled fonts, Archivo Narrow and Oswald, are licensed under
+the SIL Open Font License 1.1 (OFL), which allows use in printed work and in your posters. Their licence texts are in
+[`crossword_poster/fonts/`](crossword_poster/fonts/README.md). Dependencies are listed in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md); none is copyleft.
+
+## Acknowledgements
+
+Thanks to everyone who sent in clues for the first poster, and to the people who proofread it. Thanks also to the
+projects this tool stands on: [Playwright](https://playwright.dev/) and Chromium for layout and printing,
+[pypdf](https://github.com/py-pdf/pypdf) and [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) for PDF work,
+[Pillow](https://python-pillow.github.io) and [NumPy](https://numpy.org) for images, and the designers of
+[Archivo Narrow](https://github.com/Omnibus-Type/ArchivoNarrow) and [Oswald](https://github.com/googlefonts/OswaldFont).
+
+Made by Faramarz ([@faramarz](https://github.com/faramarz)).

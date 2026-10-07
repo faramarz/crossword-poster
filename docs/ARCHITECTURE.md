@@ -1,7 +1,8 @@
 # Architecture (for contributors)
 
 crossword-poster turns a table of clues and answers into print-ready PDFs. This page explains how the pieces fit so you
-can change them safely. For usage, see the README.
+can change them safely. For usage, see the [README](../README.md), the [beginner guide](GUIDE.md) and the
+[command reference](CLI.md). To contribute, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Pipeline
 
