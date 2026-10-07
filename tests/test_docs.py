@@ -157,3 +157,17 @@ def test_every_image_in_docs_is_used_by_a_page():
     pages = "\n".join(p.read_text(encoding="utf-8") for p in [*ROOT.glob("*.md"), *ROOT.glob("docs/*.md")])
     unused = [p.name for p in (ROOT / "docs").glob("*.png") if p.name not in pages]
     assert not unused, unused
+
+
+def test_the_claude_code_copy_of_the_skill_matches_the_source():
+    """`.claude/skills/crossword-poster` is a plain copy (not a symlink: those break on Windows and in the sdist)."""
+    src = ROOT / "skills" / "crossword-poster"
+    copy = ROOT / ".claude" / "skills" / "crossword-poster"
+    if not copy.exists():
+        pytest.skip(".claude/ is not shipped in the source distribution")
+    names = sorted(p.name for p in src.iterdir() if p.is_file())
+    assert names == sorted(p.name for p in copy.iterdir() if p.is_file())
+    for name in names:
+        assert (copy / name).read_bytes() == (src / name).read_bytes(), (
+            f"{name} differs; refresh the copy with: cp skills/crossword-poster/* .claude/skills/crossword-poster/"
+        )

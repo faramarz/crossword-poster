@@ -56,7 +56,7 @@ examples/           sample_birthday.csv (fictional) and sample_clues.csv (genera
 docs/               GUIDE.md, AI_AGENTS.md, CLI.md, TROUBLESHOOTING.md, ARCHITECTURE.md, sample images
 scripts/            build_all.sh, build_sample.sh, check_licenses.sh, sync_cli_docs.py, release_notes.py
 skills/crossword-poster/   the Claude skill for people who make posters (SKILL.md)
-.claude/skills/crossword-poster   a symlink to skills/crossword-poster, so Claude Code finds the skill in a clone
+.claude/skills/crossword-poster   a copy of skills/crossword-poster, so Claude Code finds the skill in a clone (a test keeps them identical)
 tests/              pytest suite
 data/               private clue files (gitignored)
 ```

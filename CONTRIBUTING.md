@@ -71,7 +71,7 @@ crossword_poster/samples/   the bundled sample clues
 examples/           sample_birthday.csv (fictional) and sample_clues.csv (general trivia)
 scripts/            build_all.sh, build_sample.sh (regenerates the images in docs/), check_licenses.sh
 docs/               GUIDE.md, AI_AGENTS.md, CLI.md, TROUBLESHOOTING.md, ARCHITECTURE.md and the sample images
-skills/             the crossword-poster skill for Claude (SKILL.md); .claude/skills/ links to it
+skills/             the crossword-poster skill for Claude (SKILL.md); .claude/skills/ holds a copy
 tests/              pytest suite (unit tests and end-to-end tests)
 data/               your private clue files (gitignored)
 ```

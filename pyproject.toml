@@ -78,6 +78,9 @@ include = [
     "/CODE_OF_CONDUCT.md",
     "/SECURITY.md",
     "/SUPPORT.md",
+    "/AGENTS.md",
+    "/CLAUDE.md",
+    "/skills",
 ]
 
 [tool.pytest.ini_options]

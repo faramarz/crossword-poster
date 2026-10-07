@@ -105,7 +105,7 @@ claude
 
 Claude Code reads [CLAUDE.md](../CLAUDE.md) (which points to [AGENTS.md](../AGENTS.md)) automatically when it starts in
 this folder. It also finds the project skill, [crossword-poster](../skills/crossword-poster/SKILL.md), because
-`.claude/skills/crossword-poster` links to it. If you would rather not clone, open Claude Code in any folder and add the
+a copy of it ships in `.claude/skills/crossword-poster`. If you would rather not clone, open Claude Code in any folder and add the
 skill as described [below](#add-the-crossword-poster-skill-to-claude).
 
 **3. Put your clues file in the `data/` folder** of the copy (for example `data/my_clues.csv`). Claude Code asks your
@@ -246,7 +246,7 @@ A skill is a folder of instructions that Claude loads when a job needs it. The `
 whole workflow in this repository: check the install, clean the clues, ask for your title, size and style, build, review
 the warnings, and prepare the print shop hand-off. It also tells Claude to keep your clues private.
 
-**In Claude Code.** If you cloned this repository there is nothing to do: `.claude/skills/crossword-poster` links to
+**In Claude Code.** If you cloned this repository there is nothing to do: `.claude/skills/crossword-poster` holds a copy of
 the skill. To use it in another folder, copy the skill folder into `.claude/skills/` in that folder, or into
 `.claude/skills/` inside your home folder to have it everywhere. The exact commands are in
 [skills/crossword-poster/README.md](../skills/crossword-poster/README.md).
