@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest an improvement, a new poster size, a new style, or a docs change.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. For questions about how to do something, please use [Discussions](https://github.com/faramarz/crossword-poster/discussions/categories/q-a) instead.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of request is this?
+      options:
+        - A new poster size
+        - A new style or look
+        - A change to how clues are read or checked
+        - Documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe what you want to make or do, and what gets in the way. A real occasion helps (for example "an A1 poster for a UK print shop").
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: For a size, give the width and height in inches. For a style, describe the look and when someone would pick it. A sketch or picture helps.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried or considered instead?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Can you help?
+      options:
+        - label: I would like to work on this myself (see CONTRIBUTING.md).
+        - label: I can test a change on my computer.

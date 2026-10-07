@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or share an idea (Discussions Q&A)
+    url: https://github.com/faramarz/crossword-poster/discussions/categories/q-a
+    about: Questions about making a poster, printing, or how something works. Please ask here first.
+  - name: Troubleshooting guide
+    url: https://github.com/faramarz/crossword-poster/blob/main/docs/TROUBLESHOOTING.md
+    about: Fixes for the most common problems (Chromium, command not found, words not fitting, printing).
+  - name: Report a security problem privately
+    url: https://github.com/faramarz/crossword-poster/security/advisories/new
+    about: Please do not open a public issue for a security problem.
