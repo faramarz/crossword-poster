@@ -9,3 +9,9 @@ contact_links:
   - name: Report a security problem privately
     url: https://github.com/faramarz/crossword-poster/security/advisories/new
     about: Please do not open a public issue for a security problem.
+  - name: Send feedback by email
+    url: mailto:gm@faramarz.xyz
+    about: No GitHub account, or want to keep it private? Email gm@faramarz.xyz. Please do not include private clues or names.
+  - name: Show and tell (share your poster)
+    url: https://github.com/faramarz/crossword-poster/discussions/categories/show-and-tell
+    about: Show a photo of your finished poster and tell us about the occasion. Please hide names and private clues.

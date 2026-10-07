@@ -16,6 +16,7 @@ from typing import Optional
 from . import __version__
 from .common import check_chromium, install_command, install_command_text
 from .errors import EnvironmentProblem, UserError
+from .feedback import NO_HINT_ENV, print_hint
 from .pipeline import STYLES, BuildOptions, build, parse_sizes
 
 ISSUES_URL = "https://github.com/faramarz/crossword-poster/issues"
@@ -26,6 +27,7 @@ EASY = {
     "template": "write a starter clues file (CSV) to fill in",
     "doctor": "check that this computer is ready (Python, fonts, Chromium)",
     "install-browser": "download the Chromium browser that prints the poster (one time)",
+    "feedback": "share how it went, or show your poster (prints links; sends nothing)",
 }
 POWER = {
     "pool": "clues file -> cleaned list of answers, with a report of problems",
@@ -40,6 +42,7 @@ POWER = {
 MODULES = {
     "pool": "pool", "generate": "generate", "validate": "validate", "render": "render_news", "verify": "verify",
     "actual-size": "actual_size", "crops": "crops", "transpose": "transpose", "doctor": "doctor",
+    "feedback": "feedback",
 }  # fmt: skip
 
 
@@ -66,6 +69,12 @@ def top_help() -> str:
 
 
 # ------------------------------------------------------------------- build
+_NO_HINT_HELP = (
+    "do not print the one-line reminder about `crossword-poster feedback` after a successful build "
+    f"(the same as setting {NO_HINT_ENV}=1)"
+)
+
+
 def _build_parser(prog: str = "crossword-poster build") -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog=prog,
@@ -154,6 +163,7 @@ def _build_parser(prog: str = "crossword-poster build") -> argparse.ArgumentPars
         "--no-crops", action="store_true", help="make the checks faster by skipping the per-square stroke check"
     )
     g.add_argument("--verbose", action="store_true", help="print every check instead of a short summary")
+    g.add_argument("--no-feedback-hint", action="store_true", help=_NO_HINT_HELP)
     return ap
 
 
@@ -173,7 +183,10 @@ def cmd_build(argv: list) -> int:
     """``build``: the end-to-end pipeline."""
     a = _build_parser().parse_args(argv)
     result = build(_options_from_args(a))
-    return 0 if result.checks_ok else 1
+    if not result.checks_ok:
+        return 1
+    print_hint(a.no_feedback_hint)
+    return 0
 
 
 # ------------------------------------------------------------------ sample
@@ -189,6 +202,7 @@ def cmd_sample(argv: list) -> int:
     ap.add_argument("--size", default="18x24", metavar="WxH", help="poster size in inches (default %(default)s)")
     ap.add_argument("--style", default="grey", choices=[*STYLES, "all"], help="default %(default)s")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--no-feedback-hint", action="store_true", help=_NO_HINT_HELP)
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
     csv_path = os.path.join(a.out, "sample_birthday.csv")
@@ -199,7 +213,10 @@ def cmd_sample(argv: list) -> int:
         clues=csv_path, out=a.out, title="Alex's 50th Birthday Crossword", subtitle="Clues from the people who love you",
         sizes=parse_sizes(a.size), style=a.style, seed=a.seed,
     )  # fmt: skip
-    return 0 if build(opts).checks_ok else 1
+    if not build(opts).checks_ok:
+        return 1
+    print_hint(a.no_feedback_hint)
+    return 0
 
 
 # ---------------------------------------------------------------- template

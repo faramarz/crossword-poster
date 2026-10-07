@@ -24,15 +24,18 @@
 
 ## Why this exists
 
-I built this to make a crossword poster for a family member's 50th birthday. Friends and family sent in clues and
-answers about the guest of honour: shared jokes, old trips, favourite foods. I wanted every one of those answers on the
-poster, printed large enough to hang on a wall and fill in with a pen at the party. It worked, and people loved it. I am
-sharing the tool so you can do the same for your own birthday, anniversary, retirement or reunion.
+This tool turns the clues that friends and family send in into a crossword poster for a special occasion. Every answer
+ends up on the poster, printed large enough to hang on a wall and fill in with a pen at the party. You can do the same
+for a birthday, anniversary, retirement, wedding or reunion.
 
-You do not need to be a programmer. The [step-by-step guide](docs/GUIDE.md) starts from zero and covers collecting clues,
-installing the tool, printing, and the party itself.
+<p align="center"><img src="docs/images/demo.gif" alt="Terminal recording: running crossword-poster sample --out my-first-poster builds the fictional sample poster in a few seconds, then ls lists the PDFs, PNGs and CSV it made" width="720"></p>
+
+You do not need to be a programmer. The [step-by-step guide](docs/GUIDE.md) starts from zero and covers collecting
+clues, installing the tool, printing, and the party itself.
 
 ## What you get
+
+![How it works: your clues go into the grid builder, then the checks, then layout and fit, which writes the poster PDF with bleed, a trim PDF, an answer sheet and an actual-size check page](docs/images/how-it-works.svg)
 
 Give it a spreadsheet with a **clue** column and an **answer** column. It writes these files:
 
@@ -121,6 +124,16 @@ crossword-poster build --clues my_clues.csv --title "Sam's 50th Birthday" --subt
 The run ends with a plain-language summary: the files written, the size of each square, the clue type size, and any
 answers that did not fit.
 
+## Use it with an AI assistant
+
+If you would rather not type commands yourself, an AI assistant that can run commands on your computer can do the
+steps for you: Claude Code, Claude's desktop app (Cowork), Codex, Cursor, GitHub Copilot or Gemini CLI. A plain chat
+assistant can still help you collect, clean and de-duplicate your clues. Your clues stay on your computer, because the
+tool runs offline.
+
+Copy-paste prompts, a ready-made Claude skill and step-by-step setup for each assistant are in
+[docs/AI_AGENTS.md](docs/AI_AGENTS.md).
+
 ## Features
 
 - **Every answer is used.** The grid generator searches many layouts and keeps the most compact one that holds all of your answers. If one cannot cross any other, it tells you which and why.
@@ -133,6 +146,12 @@ answers that did not fit.
 - **Friendly errors.** Mistakes in your file or setup get a plain message and a "how to fix" line, not a traceback.
 - **Private and offline.** Everything runs on your computer. Nothing is uploaded.
 - **Free for personal use, and tested.** Source-available under a noncommercial licence, bundled open fonts, unit tests on Python 3.9 to 3.14, end-to-end tests with real Chromium on Linux, and a real sample build on macOS and Windows in CI.
+
+### Styles and sizes
+
+![The fictional sample poster in its three styles side by side: grey blocks, solid black blocks, and black blocks with a cake and a party hat](docs/images/gallery-styles.png)
+
+![The same sample poster at 18 x 24, 24 x 36 and 36 x 48 inches, drawn to scale and bottom-aligned](docs/images/gallery-sizes.png)
 
 ## Python versions
 
@@ -181,6 +200,32 @@ Full reference with every option, exit code and the CSV format: [docs/CLI.md](do
 - **Is my data private?** Yes. Nothing leaves your computer.
 - **Something broke.** Run `crossword-poster doctor`, then see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
+## Documentation
+
+| Page | What it covers |
+|---|---|
+| [Beginner guide](docs/GUIDE.md) | From collecting clues to the party, with exact install steps for macOS, Windows and Linux. |
+| [Make your poster with an AI assistant](docs/AI_AGENTS.md) | Claude, Codex, Cursor, Copilot and Gemini CLI, with copy-paste prompts. |
+| [Troubleshooting and FAQ](docs/TROUBLESHOOTING.md) | Fixes for install, clue file, build and printing problems. |
+| [Command line reference](docs/CLI.md) | Every command, option, exit code and the CSV format. |
+| [Architecture](docs/ARCHITECTURE.md) | How the tool works inside, for developers. |
+
+## Feedback
+
+Tell us how it went, or show off your poster.
+
+- **Feedback form:** [open the form](https://github.com/faramarz/crossword-poster/issues/new?template=feedback.yml).
+  Or run `crossword-poster feedback`, which opens the same form with your version and operating system filled in. The
+  command sends nothing itself: it prints the links and opens your browser.
+- **Show and tell:** share a photo of your poster in
+  [Show and tell](https://github.com/faramarz/crossword-poster/discussions/categories/show-and-tell).
+- **No GitHub account?** Email [gm@faramarz.xyz](mailto:gm@faramarz.xyz).
+
+After a successful build the tool prints a one-line reminder about `crossword-poster feedback`. To turn it off, add
+`--no-feedback-hint` to the command, or set `CROSSWORD_POSTER_NO_FEEDBACK=1`.
+
+Please do not paste private clues or names into a public issue or discussion.
+
 ## Contributing
 
 Bug reports, new sizes, new styles and doc fixes are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). Please read
@@ -213,8 +258,7 @@ PolyForm Noncommercial License.*
 
 ## Acknowledgements
 
-Thanks to everyone who sent in clues for the first poster, and to the people who proofread it. Thanks also to the
-projects this tool stands on: [Playwright](https://playwright.dev/) and Chromium for layout and printing,
+Thanks to the projects this tool stands on: [Playwright](https://playwright.dev/) and Chromium for layout and printing,
 [pypdf](https://github.com/py-pdf/pypdf) and [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) for PDF work,
 [Pillow](https://python-pillow.github.io) for images, and the designers of
 [Archivo Narrow](https://github.com/Omnibus-Type/ArchivoNarrow) and [Oswald](https://github.com/googlefonts/OswaldFont).

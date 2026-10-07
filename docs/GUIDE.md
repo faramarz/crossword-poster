@@ -40,6 +40,8 @@ Words used in this guide:
 
 ---
 
+![How it works: your clues go into the grid builder, then the checks, then layout and fit, which writes the print files](images/how-it-works.svg)
+
 ## 1. Plan
 
 ### Pick the date and work backwards
@@ -95,8 +97,9 @@ means the poster has 8 percent or more of its height empty at the bottom, which 
 prefers for that poster size (see below). The build prints a warning, but the poster is still legible. A bigger poster
 size never holds fewer clues than a smaller one, and its squares and text are never smaller.
 
-**In real use, a 214-clue list fit on 24 x 36 in with 0.46 in (11.6 mm) squares and 12.3 pt clue text.** The
-grid for it was 50 x 51 squares. On 36 x 48 the same list got 0.69 in (17.5 mm) squares and 13.8 pt text.
+**As a rule of thumb, about 200 clues fit on 24 x 36 in without a size warning**, with 0.46 in (12 mm) squares and 12.9 pt
+clue text, as the table shows. Squares that small are workable for a pen but snug. On 36 x 48 the same 200 clues get
+0.69 in (17 mm) squares.
 
 How to read this table:
 
@@ -288,7 +291,7 @@ full list of accepted heading names is in the [CSV format reference](CLI.md#the-
 
 ### Problems you will probably meet
 
-Here is what shows up in real clue collections, and what to do about each.
+Here is what commonly shows up in a collection of clues, and what to do about each.
 
 | Problem | Example | What the tool does | What you should do |
 |---|---|---|---|
@@ -340,7 +343,8 @@ The tool also does a basic check when you build, and the summary lists every row
 
 ## 4. Install the tool
 
-You do this once. It takes about 10 minutes, mostly waiting for downloads. Pick your computer.
+You do this once. It takes about 10 minutes, mostly waiting for downloads. Pick your computer. (Or let an AI assistant
+do it: see [Make your poster with an AI assistant](AI_AGENTS.md).)
 
 You will type commands into a window called the **terminal** (on Windows it is called Command Prompt). You type a line,
 press Enter, and the computer does it. Copy and paste each line exactly. Do one line at a time.
@@ -414,10 +418,10 @@ crossword-poster doctor
 **What success looks like:**
 
 ```text
-crossword-poster 1.1.0: checking this computer
+crossword-poster 1.2.0: checking this computer
 
   [ok] Python 3.13.16 (needs 3.9 or newer)
-  [ok] crossword-poster 1.1.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
+  [ok] crossword-poster 1.2.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
   [ok] Bundled fonts found (Archivo Narrow, Oswald)
   [ok] Chromium 141.0.7390.37
 
@@ -547,6 +551,9 @@ Next time you want to use the tool, open the terminal, go to the folder, and swi
 
 ### Try the sample first
 
+![Terminal recording of crossword-poster sample building the fictional poster](images/demo.gif)
+
+
 ```bash
 crossword-poster sample --out my-first-poster
 ```
@@ -657,10 +664,16 @@ Open `poster/poster_24x36_grey_preview.png` to see the whole poster. Open the PD
 
 ### Choose a size
 
+![The same sample poster at 18 x 24, 24 x 36 and 36 x 48 inches, drawn to scale](images/gallery-sizes.png)
+
+
 Use `--size WIDTHxHEIGHT` in inches. 18x24, 24x36 and 36x48 are the sizes the layout is tuned for. Other sizes work too
 (`--size 16.54x23.39` for A2, `--size 36x24` for a landscape poster). To compare sizes in one go: `--size 18x24,24x36`.
 
 ### Choose a style
+
+![The sample poster in the grey, black and icons styles](images/gallery-styles.png)
+
 
 | Style | Looks like | Pick it when |
 |---|---|---|
@@ -840,5 +853,18 @@ Have a wonderful party.
 ## Where to go next
 
 - Something went wrong: [Troubleshooting](TROUBLESHOOTING.md).
+- Prefer to let an AI assistant do the typing: [Make your poster with an AI assistant](AI_AGENTS.md).
 - Every command and option: [CLI reference](CLI.md).
 - Want to change the tool: [CONTRIBUTING](../CONTRIBUTING.md) and [ARCHITECTURE](ARCHITECTURE.md).
+
+---
+
+## Feedback
+
+When your party is over, tell us how it went. Run `crossword-poster feedback`, which prints the links and opens the
+feedback form in your browser with your version and operating system filled in. It sends nothing itself. You can also
+[open the form](https://github.com/faramarz/crossword-poster/issues/new?template=feedback.yml) directly, show your
+poster in [Show and tell](https://github.com/faramarz/crossword-poster/discussions/categories/show-and-tell), or email
+[gm@faramarz.xyz](mailto:gm@faramarz.xyz) if you do not have a GitHub account. Please do not post private clues or names
+in public. If the one-line reminder after a build bothers you, add `--no-feedback-hint` or set
+`CROSSWORD_POSTER_NO_FEEDBACK=1`.

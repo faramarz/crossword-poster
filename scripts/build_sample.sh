@@ -20,3 +20,5 @@ cp "$OUT/black_18x24/poster_18x24_black_preview.png" docs/sample_18x24_black.png
 cp "$OUT/grey_24x36/answer_sheet_letter.png"         docs/sample_solution.png
 cp "$OUT/icons_18x24/poster_18x24_icons_preview.png" docs/style_icons_18x24.png
 echo "updated docs/sample_*.png and docs/style_icons_18x24.png"
+# The wider README/guide visuals (flow diagram, style and size galleries, terminal demo GIF) are in docs/images/:
+#   python scripts/build_visuals.py

@@ -8,6 +8,33 @@ All notable changes to this project are recorded here. The format follows
 
 Nothing yet.
 
+## [1.2.0] - 2026-10-07
+
+### Added
+
+- **Pictures in the README and guide.** A "how it works" diagram, a gallery of the three styles and the three poster
+  sizes drawn to scale, and a short recording of the sample being built. `python scripts/build_visuals.py` remakes them
+  from the fictional sample.
+- **Make your poster with an AI assistant** ([docs/AI_AGENTS.md](docs/AI_AGENTS.md)): step-by-step instructions and
+  copy-paste prompts for Claude Code, the Claude desktop app with Cowork, Claude chat, OpenAI Codex, Cursor, GitHub
+  Copilot and Gemini CLI.
+- **A Claude skill** in [skills/crossword-poster](skills/crossword-poster/SKILL.md). Claude Code finds it automatically
+  in a clone; each release also attaches `crossword-poster-skill.zip` for the Claude apps.
+- **AGENTS.md and CLAUDE.md**, which coding assistants read automatically.
+
+- **A feedback form.** There is a new "Share feedback or show your poster" form in the GitHub issue chooser. It asks how
+  it went, what worked and what to improve. The chooser also links to an email address (gm@faramarz.xyz) for people
+  without a GitHub account, and to the Show and tell discussions where you can share a photo of your poster.
+- **`crossword-poster feedback`.** A new command that prints the links above and opens the feedback form in your browser
+  with the version and your computer filled in. It sends nothing itself and never reads your clues. Add `--no-open` to
+  only print the links.
+- **A one-line reminder after a successful `build` or `sample`** that points to `crossword-poster feedback`. Turn it off
+  with `--no-feedback-hint` or by setting `CROSSWORD_POSTER_NO_FEEDBACK=1`.
+
+### Changed
+
+- The README introduction and the guide's size advice are now written in general terms.
+
 ## [1.1.0] - 2026-10-07
 
 ### Changed
@@ -78,5 +105,6 @@ PolyForm Noncommercial License.
 - PDFs are read with `pypdf` and rendered with `pypdfium2`. The earlier AGPL dependency (PyMuPDF) is not used. No
   Python dependency is copyleft. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
-[Unreleased]: https://github.com/faramarz/crossword-poster/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/faramarz/crossword-poster/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/faramarz/crossword-poster/releases/tag/v1.2.0
 [1.1.0]: https://github.com/faramarz/crossword-poster/releases/tag/v1.1.0

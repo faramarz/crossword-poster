@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag such as v1.0.0 to build the sdist and wheel and attach them to a GitHub Release.
+# Push a tag such as v1.0.0 to build the sdist and wheel, zip the Claude skill, and attach them to a GitHub Release.
 # The notes come from the matching section of CHANGELOG.md. Nothing is uploaded to a package index.
 on:
   push:
@@ -31,12 +31,18 @@ jobs:
           fi
       - run: python -m build
       - run: python -m twine check dist/*
+      - name: Zip the Claude skill (a folder named crossword-poster at the root of the zip)
+        run: |
+          mkdir -p skill-zip
+          (cd skills && zip -r -X ../skill-zip/crossword-poster-skill.zip crossword-poster -x '*/__pycache__/*' -x '*/.DS_Store')
+          unzip -l skill-zip/crossword-poster-skill.zip
+          unzip -l skill-zip/crossword-poster-skill.zip | grep -q ' crossword-poster/SKILL.md$'
       - name: Take the release notes from CHANGELOG.md
         run: python scripts/release_notes.py "$GITHUB_REF_NAME" > release-notes.md
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          gh release create "$GITHUB_REF_NAME" dist/* skill-zip/crossword-poster-skill.zip \
             --title "crossword-poster ${GITHUB_REF_NAME#v}" \
             --notes-file release-notes.md

@@ -1,0 +1,54 @@
+name: Share feedback or show your poster
+description: Tell us how making your poster went, what worked and what to improve.
+title: "[Feedback]: "
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying crossword-poster! We would love to hear how it went, good or bad.
+
+        **Please never paste private clues or names here.** This page is public, and posters are often surprises.
+        If you do not have a GitHub account, or you would rather keep it private, email **gm@faramarz.xyz** instead.
+  - type: dropdown
+    id: how_it_went
+    attributes:
+      label: How did it go?
+      options:
+        - Loved it
+        - It worked with some bumps
+        - I got stuck
+    validations:
+      required: true
+  - type: input
+    id: occasion
+    attributes:
+      label: What was the poster for? (optional)
+      placeholder: "a 40th birthday"
+  - type: textarea
+    id: what_worked
+    attributes:
+      label: What worked well?
+      description: Anything that was easy, clear or made you smile.
+  - type: textarea
+    id: what_to_improve
+    attributes:
+      label: What could be better?
+      description: Anything that confused you, took too long or looked wrong. Made-up examples are perfect.
+  - type: input
+    id: version
+    attributes:
+      label: crossword-poster version
+      description: Filled in for you if you came from `crossword-poster feedback`. Otherwise run `crossword-poster --version`.
+      placeholder: "1.1.0"
+  - type: input
+    id: os
+    attributes:
+      label: Computer
+      description: Filled in for you if you came from `crossword-poster feedback`.
+      placeholder: "macOS 15.1 (arm64), Python 3.13.1"
+  - type: textarea
+    id: photo
+    attributes:
+      label: A photo of your poster (optional)
+      description: Drag a picture into this box. Please hide names and private clues first (cover them or blur them).

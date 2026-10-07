@@ -29,12 +29,16 @@ git clone https://github.com/faramarz/crossword-poster
 cd crossword-poster
 python3 -m venv .venv
 source .venv/bin/activate              # Windows (Command Prompt): .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[dev,xlsx]"
 crossword-poster install-browser       # one-time download; needed for the end-to-end tests
 crossword-poster doctor                # should end with "Everything is ready."
 ```
 
-The `dev` extra installs `pytest`, `ruff`, `build`, `openpyxl` and `pyyaml`.
+The `dev` extra installs `pytest`, `ruff`, `build`, `twine`, `openpyxl` and `pyyaml`. The `xlsx` extra adds `.xlsx` reading
+(`openpyxl` and `defusedxml`).
+
+Working with an AI coding assistant? [AGENTS.md](AGENTS.md) has the same setup and rules in a form that assistants read
+automatically.
 
 ## Run the checks
 
@@ -66,7 +70,8 @@ crossword_poster/fonts/     bundled fonts (SIL OFL) and their licence texts
 crossword_poster/samples/   the bundled sample clues
 examples/           sample_birthday.csv (fictional) and sample_clues.csv (general trivia)
 scripts/            build_all.sh, build_sample.sh (regenerates the images in docs/), check_licenses.sh
-docs/               GUIDE.md, CLI.md, TROUBLESHOOTING.md, ARCHITECTURE.md and the sample images
+docs/               GUIDE.md, AI_AGENTS.md, CLI.md, TROUBLESHOOTING.md, ARCHITECTURE.md and the sample images
+skills/             the crossword-poster skill for Claude (SKILL.md); .claude/skills/ links to it
 tests/              pytest suite (unit tests and end-to-end tests)
 data/               your private clue files (gitignored)
 ```
@@ -139,4 +144,5 @@ Some ideas, from small to larger:
    If a command's options changed, run `python scripts/sync_cli_docs.py` (a test fails when `docs/CLI.md` is out of date).
 3. Commit, then tag the commit `vX.Y.Z` and push the tag. The `Release` workflow builds the sdist and wheel and creates
    the GitHub Release with the notes from `CHANGELOG.md` (preview them with `python scripts/release_notes.py X.Y.Z`).
-   Nothing is uploaded to PyPI.
+   It also attaches `crossword-poster-skill.zip`, the Claude skill from `skills/crossword-poster`. Nothing is uploaded
+   to PyPI.

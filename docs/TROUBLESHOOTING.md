@@ -372,6 +372,23 @@ code. See [CONTRIBUTING](../CONTRIBUTING.md) and [ARCHITECTURE](ARCHITECTURE.md)
 No. The tool makes a free-form crossword: it places exactly your answers and crosses them wherever letters allow. It does
 not make symmetrical patterns or fill the grid with extra words.
 
+### How do I give feedback or show my poster?
+
+Run `crossword-poster feedback`. It prints the links and opens the feedback form in your browser, with your version and
+operating system filled in. It sends nothing itself. You can also
+[open the form](https://github.com/faramarz/crossword-poster/issues/new?template=feedback.yml) directly, share a photo in
+[Show and tell](https://github.com/faramarz/crossword-poster/discussions/categories/show-and-tell), or email
+gm@faramarz.xyz if you have no GitHub account. Please keep private clues and names out of public posts.
+
+To hide the one-line reminder that `build` and `sample` print after a success, add `--no-feedback-hint` or set
+`CROSSWORD_POSTER_NO_FEEDBACK=1`.
+
+### Can an AI assistant make the poster for me?
+
+Yes, if it can run commands on your computer (Claude Code, Claude's Cowork, Codex, Cursor and similar). A plain chat
+assistant can help you clean up the clues but cannot build the PDF. See
+[Make your poster with an AI assistant](AI_AGENTS.md) for prompts you can copy.
+
 ### Can I use it for something other than a birthday?
 
 Yes. Anniversaries, retirements, weddings, reunions, quiz nights, classrooms and team events all work. Change the title and

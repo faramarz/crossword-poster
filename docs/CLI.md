@@ -19,7 +19,7 @@ codes mean, the environment variables, and the format of the clues file. The hel
 ## Commands at a glance
 
 ```text
-crossword-poster 1.1.0: turn a spreadsheet of clues and answers into a print-ready crossword poster.
+crossword-poster 1.2.0: turn a spreadsheet of clues and answers into a print-ready crossword poster.
 
 usage: crossword-poster [--version] <command> [options]
 
@@ -29,6 +29,7 @@ Start here:
   template         write a starter clues file (CSV) to fill in
   doctor           check that this computer is ready (Python, fonts, Chromium)
   install-browser  download the Chromium browser that prints the poster (one time)
+  feedback         share how it went, or show your poster (prints links; sends nothing)
 
 For power users (each runs one stage of `build`):
   pool             clues file -> cleaned list of answers, with a report of problems
@@ -74,6 +75,7 @@ Friendly errors print `Error: ...` and a `How to fix: ...` line on the error str
 |---|---|
 | `CROSSWORD_POSTER_CHROMIUM` | Full path to a Chromium or Chrome program to use instead of the one Playwright installs. If it is set but cannot start, the tool stops with a message (it does not fall back). Unset it to go back to the default search. |
 | `CROSSWORD_POSTER_DEBUG` | Set to any non-empty value to show a full Python traceback instead of the short "unexpected error" message. Useful for bug reports. |
+| `CROSSWORD_POSTER_NO_FEEDBACK` | Set to `1` to hide the one-line reminder about `crossword-poster feedback` that `build` and `sample` print after a success. The same as `--no-feedback-hint`. |
 | `PLAYWRIGHT_BROWSERS_PATH` | Playwright's own setting: the folder where it keeps (and the tool looks for) downloaded browsers. |
 
 **How the tool finds Chromium.** In this order:
@@ -214,7 +216,7 @@ usage: crossword-poster build [-h] --clues FILE [--title TITLE] [--subtitle SUBT
                               [--block-fill COLOR] [--grey-fill COLOR] [--spot-text SPOT_TEXT]
                               [--mode {any,full}] [--png-width PNG_WIDTH] [--no-key]
                               [--no-solution] [--no-actual-size] [--no-verify] [--no-crops]
-                              [--verbose]
+                              [--verbose] [--no-feedback-hint]
 
 Read a CSV (or .xlsx) of clues and answers, build a crossword grid with every answer in it, and print the poster(s), answer key, answer sheet and an actual-size check page.
 
@@ -277,6 +279,8 @@ skip things:
   --no-verify           skip the checks on the finished files
   --no-crops            make the checks faster by skipping the per-square stroke check
   --verbose             print every check instead of a short summary
+  --no-feedback-hint    do not print the one-line reminder about `crossword-poster feedback` after
+                        a successful build (the same as setting CROSSWORD_POSTER_NO_FEEDBACK=1)
 
 Example:
   crossword-poster build --clues my_clues.csv --title "Sam's 50th Birthday" --subtitle "Clues from everyone who loves you" --size 24x36 --style grey --out poster/
@@ -341,7 +345,7 @@ copied into the output folder so you can open it as an example.
 
 ```text
 usage: crossword-poster sample [-h] [--out DIR] [--size WxH] [--style {black,icons,grey,all}]
-                               [--seed SEED]
+                               [--seed SEED] [--no-feedback-hint]
 
 Build the bundled, fictional birthday crossword (Alex's 50th) so you can see what the tool makes.
 
@@ -352,6 +356,8 @@ options:
   --style {black,icons,grey,all}
                         default grey
   --seed SEED
+  --no-feedback-hint    do not print the one-line reminder about `crossword-poster feedback` after
+                        a successful build (the same as setting CROSSWORD_POSTER_NO_FEEDBACK=1)
 ```
 
 ```bash
@@ -450,6 +456,30 @@ options:
 ```bash
 crossword-poster install-browser               # macOS, Windows, Linux with the libraries already present
 crossword-poster install-browser --with-deps   # Linux: also install Chromium's system libraries (uses sudo)
+```
+
+## feedback
+
+Shows where to share feedback or a photo of your poster, and opens the feedback form in your browser with the version and
+your computer filled in (you can change both in the form). It sends nothing anywhere itself and never reads your clues
+file. If there is no screen (for example over SSH) or the browser cannot be opened, it just prints the links. Exit code 0.
+
+```text
+usage: crossword-poster feedback [-h] [--no-open]
+
+Show how to share feedback or show off your poster, and open the feedback form in your browser.
+The link has the program version and a short description of this computer filled in; you can
+change both in the form. This command sends nothing anywhere itself and never reads your clues
+file. Please do not put private clues or names in feedback.
+
+options:
+  -h, --help  show this help message and exit
+  --no-open   only print the links; do not open the browser
+```
+
+```bash
+crossword-poster feedback              # print the links and open the form
+crossword-poster feedback --no-open    # only print the links
 ```
 
 ## Single-stage commands
