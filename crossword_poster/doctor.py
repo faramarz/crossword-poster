@@ -8,7 +8,7 @@ from importlib import import_module, metadata
 from typing import Optional
 
 from . import __version__
-from .common import check_chromium, chromium_fix_message, missing_fonts
+from .common import REINSTALL_HINT, check_chromium, chromium_fix_message, missing_fonts
 
 MIN_PYTHON = (3, 9)
 REQUIRED = (
@@ -42,12 +42,12 @@ def run_checks() -> list[tuple[bool, str, str]]:
             missing.append(dist)
     results.append(
         (not missing, f"crossword-poster {__version__} imports; libraries: {', '.join(versions) or 'none'}",
-         "" if not missing else f"pip install --upgrade crossword-poster   (missing: {', '.join(missing)})")
+         "" if not missing else f"{REINSTALL_HINT}   (missing: {', '.join(missing)})")
     )  # fmt: skip
     bad_fonts = missing_fonts()
     results.append(
         (not bad_fonts, "Bundled fonts found (Archivo Narrow, Oswald)" if not bad_fonts else f"Bundled fonts missing: {', '.join(bad_fonts)}",
-         "" if not bad_fonts else "pip install --force-reinstall crossword-poster")
+         "" if not bad_fonts else REINSTALL_HINT)
     )  # fmt: skip
     ok, detail = check_chromium()
     results.append(

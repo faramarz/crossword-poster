@@ -28,6 +28,7 @@ import sys
 import unicodedata
 from typing import Optional
 
+from .common import XLSX_HINT
 from .errors import UserError
 
 # a trailing enumeration such as "(5)", "(3,3)" or "(5-3)"
@@ -126,7 +127,7 @@ def _read_xlsx(path: str) -> tuple[list[list[str]], list[str]]:
     except ImportError:
         raise UserError(
             "Reading .xlsx files needs the optional 'openpyxl' package.",
-            "either save the sheet as CSV (File > Save As > CSV UTF-8) or run: pip install 'crossword-poster[xlsx]'",
+            f"either save the sheet as CSV (File > Save As > CSV UTF-8) or run: {XLSX_HINT}",
         ) from None
     try:
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)

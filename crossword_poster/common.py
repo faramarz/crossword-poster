@@ -19,6 +19,10 @@ from .errors import EnvironmentProblem, UserError
 
 BLEED = 0.125  # inches, all sides
 CHROMIUM_ENV = "CROSSWORD_POSTER_CHROMIUM"
+# the tool is installed from GitHub (it is not on PyPI), so every "install it again" hint uses these
+REPO_URL = "https://github.com/faramarz/crossword-poster"
+REINSTALL_HINT = f"pip install --upgrade --force-reinstall git+{REPO_URL}"
+XLSX_HINT = f'pip install "crossword-poster[xlsx] @ git+{REPO_URL}" (with pipx: pipx inject crossword-poster openpyxl defusedxml)'
 
 # (family directory, file name) of every bundled font the renderer uses
 BUNDLED_FONTS = (
@@ -42,7 +46,7 @@ def font_data_uri(family_dir: str, filename: str) -> str:
     if not res.is_file():
         raise EnvironmentProblem(
             f"The bundled font {family_dir}/{filename} is missing from the installation.",
-            "Reinstall the package: pip install --force-reinstall crossword-poster",
+            f"Reinstall the package: {REINSTALL_HINT}",
         )
     return "data:font/ttf;base64," + base64.b64encode(res.read_bytes()).decode("ascii")
 
@@ -172,9 +176,7 @@ def sync_playwright_or_fail():
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:  # pragma: no cover - playwright is a hard dependency
-        raise EnvironmentProblem(
-            "The 'playwright' package is not installed.", "pip install --upgrade crossword-poster"
-        ) from exc
+        raise EnvironmentProblem("The 'playwright' package is not installed.", REINSTALL_HINT) from exc
     return sync_playwright
 
 

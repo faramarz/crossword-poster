@@ -12,7 +12,7 @@ environment that contains them.
 The previous PDF library, PyMuPDF (AGPL-3.0 / commercial), is **not** used any more: PDFs are inspected with `pypdf`
 and rasterised with `pypdfium2`.
 
-## Runtime dependencies (installed by `pip install crossword-poster`)
+## Runtime dependencies (installed together with the tool)
 
 Checked with `pip-licenses` on a clean Python 3.13 environment (see `scripts/check_licenses.sh`).
 
@@ -32,7 +32,7 @@ Not installed by default and never redistributed with the package.
 
 | Package | Licence | When |
 |---|---|---|
-| [openpyxl](https://openpyxl.readthedocs.io), et_xmlfile | MIT | reading `.xlsx` clue files (`pip install "crossword-poster[xlsx]"`) |
+| [openpyxl](https://openpyxl.readthedocs.io), et_xmlfile | MIT | reading `.xlsx` clue files (the `xlsx` extra) |
 | [defusedxml](https://github.com/tiran/defusedxml) | PSF-2.0 | makes openpyxl refuse malicious XML (installed with the `xlsx` extra) |
 | [pytest](https://pytest.org) | MIT | tests (`[dev]`) |
 | [ruff](https://github.com/astral-sh/ruff) | MIT | lint and format (`[dev]`) |

@@ -126,7 +126,7 @@ an answer is skipped and listed by row number. The row number is the number a sp
 |---|---|
 | `.csv` | UTF-8, with or without a BOM (byte order mark). If the file is not valid UTF-8, it is read as Windows-1252 (the old Excel default) and the tool says so. Choose "CSV UTF-8" when saving to avoid any doubt. |
 | Delimiter | A comma, semicolon or tab, detected from the first non-empty line. Excel in some countries writes semicolons. Both work. |
-| `.xlsx` | Needs the optional `openpyxl` package: `pip install "crossword-poster[xlsx]"`. The first sheet is read. Formulas show their saved values. |
+| `.xlsx` | Needs the optional `openpyxl` package: `pip install "crossword-poster[xlsx] @ git+https://github.com/faramarz/crossword-poster"` (with pipx: `pipx inject crossword-poster openpyxl defusedxml`). The first sheet is read. Formulas show their saved values. |
 | `.xls` | Not supported. Save as CSV UTF-8 or `.xlsx`. |
 | Anything else | Read as CSV. |
 
