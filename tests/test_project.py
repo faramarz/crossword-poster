@@ -95,7 +95,9 @@ def test_no_hard_coded_user_paths_in_the_package():
 def test_licence_files_exist():
     for name in ("LICENSE", "THIRD_PARTY_LICENSES.md"):
         assert (Path(ROOT) / name).stat().st_size > 500
-    assert "MIT" in (ROOT / "LICENSE").read_text(encoding="utf-8")
+    text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert "PolyForm Noncommercial License 1.0.0" in text
+    assert text.startswith("Required Notice: Copyright")
 
 
 # ------------------------------------------------------------ install instructions

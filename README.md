@@ -5,7 +5,8 @@
 **Turn a list of clues from friends and family into a print-ready crossword poster.**
 
 [![CI](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml/badge.svg)](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml)
-[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Licence: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/licence-PolyForm%20Noncommercial-blue.svg)](LICENSE)
+[![Follow @viafaramarz on X](https://img.shields.io/badge/follow-%40viafaramarz-black.svg?logo=x)](https://x.com/viafaramarz)
 [![Python 3.9 to 3.14](https://img.shields.io/badge/python-3.9%20to%203.14-blue.svg)](pyproject.toml)
 
 <table>
@@ -131,7 +132,7 @@ answers that did not fit.
 - **Checks you do not have to do by hand.** An independent validator re-derives the grid from its letters. A verifier checks page sizes, embedded fonts, colours, margins and that every clue appears exactly once.
 - **Friendly errors.** Mistakes in your file or setup get a plain message and a "how to fix" line, not a traceback.
 - **Private and offline.** Everything runs on your computer. Nothing is uploaded.
-- **Open and tested.** MIT licence, bundled open fonts, unit tests on Python 3.9 to 3.14, end-to-end tests with real Chromium on Linux, and a real sample build on macOS and Windows in CI.
+- **Free for personal use, and tested.** Source-available under a noncommercial licence, bundled open fonts, unit tests on Python 3.9 to 3.14, end-to-end tests with real Chromium on Linux, and a real sample build on macOS and Windows in CI.
 
 ## Python versions
 
@@ -188,10 +189,27 @@ the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md
 
 ## Licence
 
-The code is released under the [MIT licence](LICENSE). The bundled fonts, Archivo Narrow and Oswald, are licensed under
-the SIL Open Font License 1.1 (OFL), which allows use in printed work and in your posters. Their licence texts are in
+crossword-poster is **free for personal and other noncommercial use** under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). In plain words (the [licence text](LICENSE) is what counts):
+
+| You can | You cannot, without a commercial licence |
+|---|---|
+| Make posters for your own family, friends, school, club or charity | Sell the software or a modified version of it |
+| Change the code for your own noncommercial use | Use it, or a modified version, in a paid product, service or business |
+| Share copies, changed or not, if the [LICENSE](LICENSE) file and its `Required Notice:` lines go with them | Make posters for paying customers |
+
+**Your posters are yours.** Posters, PDFs and images you make for a noncommercial purpose are yours to keep, print and
+share, and paying a print shop to print them is fine.
+
+**Commercial use?** Write to [gm@faramarz.xyz](mailto:gm@faramarz.xyz) for a commercial licence.
+
+The bundled fonts, Archivo Narrow and Oswald, are licensed separately under the SIL Open Font License 1.1 (OFL), which
+allows use in printed work and in your posters. Their licence texts are in
 [`crossword_poster/fonts/`](crossword_poster/fonts/README.md). Dependencies are listed in
-[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md); none of the Python packages it depends on is copyleft.
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+*Version 1.0.0 was briefly published under the MIT licence and has been withdrawn. Version 1.1.0 and later are under the
+PolyForm Noncommercial License.*
 
 ## Acknowledgements
 
@@ -201,4 +219,4 @@ projects this tool stands on: [Playwright](https://playwright.dev/) and Chromium
 [Pillow](https://python-pillow.github.io) for images, and the designers of
 [Archivo Narrow](https://github.com/Omnibus-Type/ArchivoNarrow) and [Oswald](https://github.com/googlefonts/OswaldFont).
 
-Made by Faramarz ([@faramarz](https://github.com/faramarz)).
+Made by Faramarz: [@faramarz](https://github.com/faramarz) on GitHub, [@viafaramarz](https://x.com/viafaramarz) on X.

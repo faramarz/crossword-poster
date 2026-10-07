@@ -8,9 +8,27 @@ All notable changes to this project are recorded here. The format follows
 
 Nothing yet.
 
-## [1.0.0] - 2026-10-07
+## [1.1.0] - 2026-10-07
 
-The first public release.
+### Changed
+
+- **Licence.** crossword-poster is now under the
+  [PolyForm Noncommercial License 1.0.0](LICENSE) instead of MIT. It is free for personal, family, school, club and
+  charity use. Commercial use, including selling the software, building a paid product or service on it, or making
+  posters for paying customers, needs a commercial licence (write to gm@faramarz.xyz). Posters you make for a
+  noncommercial purpose are yours, and the `Required Notice:` lines in [LICENSE](LICENSE) must travel with every copy.
+- The bundled fonts stay under the SIL Open Font License 1.1.
+
+### Fixed
+
+- Fitting keeps a small safety margin per column, so the blank poster, answer key and bleed pages always lay out the
+  same on every machine.
+- Piping output into a program that closes early (`| more` on Windows) exits quietly.
+
+## [1.0.0] - 2026-10-07 [YANKED]
+
+The first public release, under the MIT licence. It was withdrawn the same day and replaced by 1.1.0 under the
+PolyForm Noncommercial License.
 
 ### Added
 
@@ -60,5 +78,5 @@ The first public release.
 - PDFs are read with `pypdf` and rendered with `pypdfium2`. The earlier AGPL dependency (PyMuPDF) is not used. No
   Python dependency is copyleft. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
-[Unreleased]: https://github.com/faramarz/crossword-poster/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/faramarz/crossword-poster/releases/tag/v1.0.0
+[Unreleased]: https://github.com/faramarz/crossword-poster/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/faramarz/crossword-poster/releases/tag/v1.1.0

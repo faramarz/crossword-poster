@@ -1,6 +1,6 @@
 # Third-party licences
 
-crossword-poster itself is released under the [MIT licence](LICENSE). This page lists everything it depends on or
+crossword-poster itself is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). This page lists everything it depends on or
 ships, with the licence of each. No Python package it depends on is itself GPL, AGPL or LGPL licensed.
 
 Binary wheels of some libraries (for example Pillow) bundle shared C libraries under their own licences, some

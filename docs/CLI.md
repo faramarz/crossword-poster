@@ -19,7 +19,7 @@ codes mean, the environment variables, and the format of the clues file. The hel
 ## Commands at a glance
 
 ```text
-crossword-poster 1.0.0: turn a spreadsheet of clues and answers into a print-ready crossword poster.
+crossword-poster 1.1.0: turn a spreadsheet of clues and answers into a print-ready crossword poster.
 
 usage: crossword-poster [--version] <command> [options]
 

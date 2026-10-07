@@ -100,6 +100,14 @@ the checks. Read it before a larger change.
   fictional sample, not from real clues.
 - If your change is user-visible, add a line under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 
+## Licence of contributions
+
+crossword-poster is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE), not an open-source
+licence: it is free for noncommercial use, and commercial use needs a separate licence from the maintainer. By opening a
+pull request you confirm that you wrote the change (or have the right to submit it), and you agree that it is released
+under the same licence and that the maintainer may also offer it under other terms, including commercial licences.
+If you are not comfortable with that, please open an issue to discuss the idea instead.
+
 ## Proposing a new poster size or style
 
 **A size.** Any `WIDTHxHEIGHT` in inches already works: sizes without tuned settings are scaled from the nearest tuned one.

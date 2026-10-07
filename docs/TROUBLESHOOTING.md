@@ -379,8 +379,12 @@ the subtitle, and pick the `grey` or `black` style. The `icons` style draws a ca
 
 ### Can I use the posters commercially?
 
-Yes. The code is MIT licensed and the bundled fonts are under the SIL Open Font License, which allows use in printed
-work. See [THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md).
+Posters you make for a noncommercial purpose (your family, friends, school, club or charity) are yours to keep, print and
+share, and paying a print shop to print them is fine. Making posters for paying customers, or using the tool in a paid
+product or business, is commercial use: the code is under the
+[PolyForm Noncommercial License 1.0.0](../LICENSE), so write to gm@faramarz.xyz for a commercial licence. The bundled
+fonts are under the SIL Open Font License, which allows use in printed work. See
+[THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md).
 
 ---
 
