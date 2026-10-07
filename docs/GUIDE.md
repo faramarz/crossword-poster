@@ -88,20 +88,25 @@ will differ a little with your own clue lengths and answers.
 
 One inch is 2.54 cm. A square of 0.6 in is about 15 mm.
 
+The clue sizes in this table were measured before the tool learned to enlarge the clue text on posters that would
+otherwise have a blank foot. Square sizes are unchanged. The rows with few clues now print larger text than shown (for
+example 20 clues on 24 x 36 come out at 27 pt rather than 18 pt).
+
 How to read this table:
 
 - **Square size** is the width of one box. People write one letter in it. About 0.6 in (15 mm) or more is comfortable
   for a pen. Below about 0.5 in (13 mm), handwriting gets cramped. This is my judgement from the samples, not a hard
   rule. Check your own poster with the [actual-size page](#6-check-before-printing).
 - **Clue text size** is in points. 12 pt is the size of ordinary book text. On a poster people read from an arm's length
-  or more away, so 14 pt and up is comfortable. The tool never goes above 14 pt on 18 x 24, 18 pt on 24 x 36, or 27 pt
-  on 36 x 48.
-- **Empty space.** When you have few clues, the grid gets big squares and the clue text hits its upper limit. The poster
-  then has blank space at the bottom. In my builds, 24 x 36 with 55 clues or fewer left about 12 to 17 percent of the
-  height empty (4 to 6 inches). 18 x 24 with 20 to 30 clues left about 11 to 12 percent. If you do not like that, pick
-  a smaller poster or add clues.
-- **Too many clues.** The tool warns above 120 clues. I tested up to 99. At 99 clues on 18 x 24, squares are 0.46 in:
-  small, but possible.
+  or more away, so 14 pt and up is comfortable. For a normal number of clues the tool uses up to 14 pt on 18 x 24, 18 pt
+  on 24 x 36, or 27 pt on 36 x 48. The build warns if the text comes out under 9 pt or the squares under 0.3 in.
+- **Empty space.** When you have few clues, the grid gets big squares and the clue text reaches its normal upper limit.
+  If that would leave 8 percent or more of the height empty at the bottom, the tool makes the clue text bigger (up to
+  1.5 times the normal limit) until the page is filled. In my builds, 20 clues on 24 x 36 grow from 18 pt to 27 pt and
+  leave about 6 percent empty, and 10 clues on 24 x 36 still leave about 17 percent, which the build reports as a
+  warning. If you do not like that, pick a smaller poster or add clues.
+- **Too many clues.** The tool warns above 120 clues and refuses more than 400. I tested up to 99. At 99 clues on
+  18 x 24, squares are 0.46 in: small, but possible. A clue longer than 300 characters is skipped: shorten it.
 
 **Good starting points**
 
@@ -267,7 +272,7 @@ Here is what shows up in real clue collections, and what to do about each.
 | **Inside jokes only one person gets** | `The thing Jo said at the 2009 barbecue` | Nothing. | Add a hint (`...at the barbecue, involving a goat`) or cut it. A few mysteries are fun. A poster full of them is not. |
 | **Facts that might be wrong** | `Year the band split`, a person's name spelling | Nothing. It does not check facts. | Look up dates and spellings. Ask the clue's author if unsure. A wrong clue on a poster is a bad surprise. |
 | **Clues with the wrong length** | `Dog (5)` but the answer has 7 letters | Corrects the number and warns. | Nothing, but fix the clue if the number was part of a joke. |
-| **Apostrophes and hyphens** | `O'Brien`, `Jean-Luc` | Both go into the grid as letters only (`OBRIEN`, `JEANLUC`). | The printed length can look odd (`O'Brien` becomes `(1,5)`). Add an `enumeration` column and write `6` or `4-3`. See [the CSV reference](CLI.md#the-clues-file). |
+| **Apostrophes and hyphens** | `O'Brien`, `Jean-Luc` | Both go into the grid as letters only (`OBRIEN`, `JEANLUC`). | Only spaces separate words in the printed length, so `O'Brien` shows `(6)` and `Jean-Luc` shows `(4-3)`. To print something else, add an `enumeration` column. See [the CSV reference](CLI.md#the-clues-file). |
 | **Rows with no clue or no answer** | A blank cell | Skipped, listed by row number. | Fill it in or delete the row. |
 
 You do not need to type the length yourself. For each clue the tool adds a length at the end: `(7)` for one word, or
@@ -365,8 +370,10 @@ pip install https://github.com/faramarz/crossword-poster/archive/refs/heads/main
 **6. Install Chromium** (a download of a few hundred megabytes):
 
 ```bash
-python -m playwright install chromium
+crossword-poster install-browser
 ```
+
+If that command fails, run `crossword-poster doctor`: it prints the exact manual command for your computer.
 
 **7. Check that it works:**
 
@@ -432,8 +439,10 @@ pip install https://github.com/faramarz/crossword-poster/archive/refs/heads/main
 **7. Install Chromium** (a download of a few hundred megabytes):
 
 ```bat
-python -m playwright install chromium
+crossword-poster install-browser
 ```
+
+If that command fails, run `crossword-poster doctor`: it prints the exact manual command for your computer.
 
 **8. Check that it works:**
 
@@ -484,10 +493,10 @@ pip install git+https://github.com/faramarz/crossword-poster
 **5. Install Chromium** along with the system libraries it needs. This uses `sudo` and may ask for your password:
 
 ```bash
-python -m playwright install --with-deps chromium
+crossword-poster install-browser --with-deps
 ```
 
-On a distribution other than Ubuntu or Debian, run `python -m playwright install chromium`, and if Chromium will not
+On a distribution other than Ubuntu or Debian, run `crossword-poster install-browser`, and if Chromium will not
 start, install your distribution's `chromium` or Google Chrome package. The tool finds those on its own, or you can
 point to it with `CROSSWORD_POSTER_CHROMIUM` (see [the CLI reference](CLI.md#environment-variables)).
 

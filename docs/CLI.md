@@ -13,7 +13,7 @@ codes mean, the environment variables, and the format of the clues file. The hel
 - [Environment variables](#environment-variables)
 - [The clues file](#the-clues-file) (CSV format spec)
 - [The files `build` writes](#the-files-build-writes)
-- [`build`](#build), [`sample`](#sample), [`template`](#template), [`doctor`](#doctor)
+- [`build`](#build), [`sample`](#sample), [`template`](#template), [`doctor`](#doctor), [`install-browser`](#install-browser)
 - [Single-stage commands](#single-stage-commands): [`pool`](#pool), [`generate`](#generate), [`validate`](#validate), [`render`](#render), [`verify`](#verify), [`actual-size`](#actual-size), [`crops`](#crops), [`transpose`](#transpose)
 
 ## Commands at a glance
@@ -24,20 +24,21 @@ crossword-poster 1.0.0: turn a spreadsheet of clues and answers into a print-rea
 usage: crossword-poster [--version] <command> [options]
 
 Start here:
-  build        make a poster, answer key, answer sheet and size-check page from a clues file
-  sample       build the bundled birthday example so you can see the result in one command
-  template     write a starter clues file (CSV) to fill in
-  doctor       check that this computer is ready (Python, fonts, Chromium)
+  build            make a poster, answer key, answer sheet and size-check page from a clues file
+  sample           build the bundled birthday example so you can see the result in one command
+  template         write a starter clues file (CSV) to fill in
+  doctor           check that this computer is ready (Python, fonts, Chromium)
+  install-browser  download the Chromium browser that prints the poster (one time)
 
 For power users (each runs one stage of `build`):
-  pool         clues file -> cleaned list of answers, with a report of problems
-  generate     grid generator on its own
-  validate     independent check of a grid.json
-  render       poster renderer on its own (from a grid.json)
-  verify       checks on the files of a finished build
-  actual-size  100% scale check page cut out of a poster PDF
-  crops        corner crops and per-square stroke check
-  transpose    swap rows and columns of a grid.json
+  pool             clues file -> cleaned list of answers, with a report of problems
+  generate         grid generator on its own
+  validate         independent check of a grid.json
+  render           poster renderer on its own (from a grid.json)
+  verify           checks on the files of a finished build
+  actual-size      100% scale check page cut out of a poster PDF
+  crops            corner crops and per-square stroke check
+  transpose        swap rows and columns of a grid.json
 
 Run `crossword-poster <command> --help` for the options of a command.
 Typical use:   crossword-poster build --clues my_clues.csv --title "Sam's 50th" --size 24x36 --out poster/
@@ -78,7 +79,7 @@ Friendly errors print `Error: ...` and a `How to fix: ...` line on the error str
 **How the tool finds Chromium.** In this order:
 
 1. `CROSSWORD_POSTER_CHROMIUM`, if set.
-2. The browser Playwright installed with `python -m playwright install chromium`.
+2. The browser Playwright installed with `crossword-poster install-browser`.
 3. Any Chromium found by search: folders named in `PLAYWRIGHT_BROWSERS_PATH`, Playwright's usual cache folders
    (`~/.cache/ms-playwright` on Linux, `~/Library/Caches/ms-playwright` on macOS, `%LOCALAPPDATA%\ms-playwright` on
    Windows), then `chromium`, `chromium-browser`, `google-chrome`, `google-chrome-stable`, `chrome` or `msedge` on your
@@ -166,7 +167,12 @@ The printed length is added at the end of each clue.
   its own answer, is reported as a possible giveaway. The build prints the count. The list is in
   `<out>/details/pool_report.json`. It is a warning only.
 - **Few or many clues.** Fewer than 2 usable clues is an error. Fewer than 8 gives a "will look sparse" warning. More
-  than 120 gives a "type will be small" warning.
+  than 120 gives a "type will be small" warning. More than 400 usable clues is an error: split the file, or keep the best.
+- **Long clues.** A clue longer than 300 characters is skipped, with its length shown, because it cannot be laid out
+  legibly. Shorten it.
+- **Swapped columns.** If most "answers" are sentences of four or more words and longer than their "clues", the tool
+  warns that the two columns look swapped and prints the `--clue-column` and `--answer-column` options that fix it. (If
+  every row was rejected because of this, the same advice is in the error message.)
 - **Clue text is printed literally.** Characters such as `<`, `>` and `&` appear exactly as typed and cannot change the
   poster's layout. Runs of spaces and line breaks inside a clue become one space.
 
@@ -202,10 +208,11 @@ usage: crossword-poster build [-h] --clues FILE [--title TITLE] [--subtitle SUBT
                               [--id-column NAME] [--grid-column NAME] [--min-len MIN_LEN]
                               [--max-len MAX_LEN] [--attempts ATTEMPTS] [--workers WORKERS]
                               [--max-width MAX_WIDTH] [--max-height MAX_HEIGHT] [--aspect ASPECT]
-                              [--grow-tries GROW_TRIES] [--block-fill COLOR] [--grey-fill COLOR]
-                              [--spot-text SPOT_TEXT] [--mode {any,full}] [--png-width PNG_WIDTH]
-                              [--no-key] [--no-solution] [--no-actual-size] [--no-verify]
-                              [--no-crops] [--verbose]
+                              [--grow-tries GROW_TRIES] [--time-limit SECONDS]
+                              [--block-fill COLOR] [--grey-fill COLOR] [--spot-text SPOT_TEXT]
+                              [--mode {any,full}] [--png-width PNG_WIDTH] [--no-key]
+                              [--no-solution] [--no-actual-size] [--no-verify] [--no-crops]
+                              [--verbose]
 
 Read a CSV (or .xlsx) of clues and answers, build a crossword grid with every answer in it, and print the poster(s), answer key, answer sheet and an actual-size check page.
 
@@ -247,6 +254,8 @@ grid search (the defaults are fine for most files):
   --aspect ASPECT       automatic window: width / height (default 1.0)
   --grow-tries GROW_TRIES
                         times the automatic window is enlarged when nothing fits (default 6)
+  --time-limit SECONDS  stop searching after this many seconds and use the best layout found; 0 =
+                        no limit (default 180)
 
 look:
   --block-fill COLOR    CSS colour for the empty squares in every style, e.g. '#c8d6e5'
@@ -307,6 +316,13 @@ scripts/build_all.sh my_clues.csv out "My Crossword"
 - `--attempts`, `--max-width`, `--max-height`, `--aspect`, `--grow-tries`: control the grid search. The defaults suit
   most files. When no size is given the tool estimates a window from the number of letters and enlarges it up to
   `--grow-tries` times (by 15% each time) until every answer fits.
+- `--time-limit SECONDS` (default 180, 0 for no limit) caps the search for a grid. While it runs, a "still searching" line
+  is printed every few seconds. When the limit is reached the best layout found so far is used, any answers that did not
+  fit are listed, and the build says how to avoid it (fewer answers, or a longer limit). If the limit is not reached the
+  grid is exactly the same as without it.
+- The fitting step enlarges the clue text when a poster has few clues: if 8% or more of its height would be blank at the
+  bottom, the text grows (up to 1.5 times the tuned maximum) until the page is filled. The build prints a warning if the
+  clue text ends up under 9 pt, the squares under 0.3 in, or 8% or more of the height is still blank.
 - `--mode full` does not put clue columns beside the grid. All clues go under it.
 - `--block-fill` sets the colour of the non-letter squares in every style. `--grey-fill` sets only the grey of `--style
   grey`, the answer key and the answer sheet. `--spot-text` only affects `--style icons`.
@@ -400,9 +416,24 @@ crossword-poster 1.0.0: checking this computer
   [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
   [ok] Bundled fonts found (Archivo Narrow, Oswald)
   [FAIL] Chromium could not start: Chromium (the browser used to print the poster) was not found or could not start.
-         Fix: run `python -m playwright install chromium` (or set CROSSWORD_POSTER_CHROMIUM to the path of a Chromium/Chrome executable)
+         Fix: run `crossword-poster install-browser`; if that does not work, run `"/usr/bin/python3" -m playwright install chromium` yourself (or set CROSSWORD_POSTER_CHROMIUM to the path of a Chromium/Chrome executable)
 
 Some checks failed. Follow the 'Fix' lines above, then run `crossword-poster doctor` again.
+```
+
+The manual command in the `Fix:` line uses the full path of the Python that is running the tool, in quotes (so a path
+with spaces works), because under pipx, uv or a virtual environment a bare `python` is a different Python. The path
+shown here is only an example. On Windows PowerShell, put `& ` in front of the quoted path.
+
+## install-browser
+
+Downloads Chromium once, with Playwright's installer, using the same Python that runs `crossword-poster`. It works
+however the tool was installed (pip, pipx, uv). It prints the command it runs, runs it, then checks that Chromium starts.
+Exit code 0 on success and 3 if the download or the check fails.
+
+```bash
+crossword-poster install-browser               # macOS, Windows, Linux with the libraries already present
+crossword-poster install-browser --with-deps   # Linux: also install Chromium's system libraries (uses sudo)
 ```
 
 ## Single-stage commands
@@ -469,8 +500,8 @@ usage: crossword-poster generate [-h] --csv CSV [--column COLUMN] [--clue-column
                                  [--attempts ATTEMPTS] [--seed SEED] [--min-len MIN_LEN]
                                  [--max-len MAX_LEN] [--required REQUIRED] [--all]
                                  [--workers WORKERS] [--noise NOISE] [--passes PASSES]
-                                 [--aspect ASPECT] [--grow-tries GROW_TRIES] [--out-json OUT_JSON]
-                                 [--out-txt OUT_TXT]
+                                 [--aspect ASPECT] [--grow-tries GROW_TRIES]
+                                 [--time-limit SECONDS] [--out-json OUT_JSON] [--out-txt OUT_TXT]
 
 Freeform ("loose", barred-free) crossword generator. Standard library only.
 
@@ -517,6 +548,7 @@ options:
   --aspect ASPECT       --all, estimated window: width/height ratio
   --grow-tries GROW_TRIES
                         --all, estimated window: times to enlarge it by 15% when nothing fits
+  --time-limit SECONDS  stop searching after this many seconds (default: no limit)
   --out-json OUT_JSON   write the grid as JSON here
   --out-txt OUT_TXT     write the text preview here
 ```
@@ -531,26 +563,27 @@ An independent check of a `grid.json` (it does not use the generator's code). Ex
 `MAXROWS` and `MAXCOLS` are optional positional numbers, not options.
 
 ```text
-usage: crossword-poster validate [-h] [--pool POOL] target [max_rows] [max_cols]
+usage: crossword-poster validate [-h] [--pool POOL] target [MAX_ROWS] [MAX_COLS]
 
 Independent grid validator (it does not import the generator).
 
-Checks a grid.json (as written by `build`):
-  * the bounding box is within --max-rows/--max-cols (optional) and tight
+Checks a grid.json, as written by `build` (with clues) or by `generate --out-json` (without clues):
+  * the grid fits within MAX_ROWS x MAX_COLS (optional) and its bounding box is tight
   * every across/down run of 2+ letters is a listed placement, and vice versa; letters match; no duplicate starts
   * numbering follows reading order; every placement has exactly one non-empty clue whose answer matches
   * no orphan letters (every letter is in a word), the letters form one connected shape, no duplicate answers
   * with --pool: every pool entry (by id) appears in the grid
   * a trailing enumeration such as "(3,3)" in a clue matches the answer length
+A raw `generate` file has no clues, so the clue checks and --pool are skipped and the output says so.
 
 Usage:
-  crossword-poster validate out/details/grid.json [MAXROWS MAXCOLS] [--pool out/details/pool.csv]
+  crossword-poster validate out/details/grid.json [MAX_ROWS MAX_COLS] [--pool out/details/pool.csv]
 Exit status 0 = valid, 1 = errors.
 
 positional arguments:
   target       grid.json, or a folder containing grid.json
-  max_rows
-  max_cols
+  MAX_ROWS     optional: report an error if the grid has more rows than this
+  MAX_COLS     optional: report an error if the grid has more columns than this
 
 options:
   -h, --help   show this help message and exit
@@ -560,7 +593,12 @@ options:
 ```bash
 crossword-poster validate out/details/grid.json --pool out/details/pool.csv
 crossword-poster validate out/details            # a folder that contains grid.json also works
+crossword-poster validate raw.json               # the output of `generate --out-json` also works
 ```
+
+`validate` accepts both `build`'s `grid.json` and the bare grid from `generate --out-json`. A bare grid has no clues, so
+the clue checks and `--pool` are skipped, and the output says so. A file that is not a grid at all gets a friendly
+"not a usable grid file" error.
 
 ### render
 

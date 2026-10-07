@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rebuild the preview images in docs/ from the fictional birthday sample (examples/sample_birthday.csv):
-#   docs/sample_24x36_grey.png, docs/sample_18x24_black.png and docs/sample_solution.png
+#   docs/sample_24x36_grey.png, docs/sample_18x24_black.png, docs/sample_solution.png and docs/style_icons_18x24.png
 #   scripts/build_sample.sh [WORK_DIR]
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,8 +11,12 @@ COMMON=(--clues examples/sample_birthday.csv --title "Alex's 50th Birthday Cross
         --subtitle "Clues from the people who love you" --png-width 1400)
 "${CLI[@]}" build "${COMMON[@]}" --size 24x36 --style grey  --out "$OUT/grey_24x36"
 "${CLI[@]}" build "${COMMON[@]}" --size 18x24 --style black --out "$OUT/black_18x24"
+# the icons style, with a big "50" reversed out of the largest black area (a shorter title lets the 50 show)
+"${CLI[@]}" build --clues examples/sample_birthday.csv --title "Alex's 50th" --png-width 900 --size 18x24 \
+    --style icons --spot-text 50 --out "$OUT/icons_18x24"
 mkdir -p docs
 cp "$OUT/grey_24x36/poster_24x36_grey_preview.png"   docs/sample_24x36_grey.png
 cp "$OUT/black_18x24/poster_18x24_black_preview.png" docs/sample_18x24_black.png
 cp "$OUT/grey_24x36/answer_sheet_letter.png"         docs/sample_solution.png
-echo "updated docs/sample_*.png"
+cp "$OUT/icons_18x24/poster_18x24_icons_preview.png" docs/style_icons_18x24.png
+echo "updated docs/sample_*.png and docs/style_icons_18x24.png"

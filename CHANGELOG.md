@@ -20,6 +20,13 @@ The first public release.
 - **Beginner-friendly commands.** `sample` builds a bundled, fictional birthday crossword. `template` writes a starter
   clues file. `doctor` checks Python, the libraries, the bundled fonts and Chromium, and prints the exact fix for anything
   missing.
+- **`install-browser`** downloads Chromium with the same Python that runs the tool, so it works under pip, pipx and uv.
+  `doctor` prints that command and, as a fallback, the manual one with the full interpreter path.
+- **Safety limits and guidance.** Clues over 300 characters are skipped, more than 400 words is an error, the grid
+  search has a wall-clock budget (`--time-limit`) with progress lines, and swapped clue and answer columns are noticed.
+  Builds warn when clue text is under 9 pt, squares under 0.3 in, or the poster foot is blank; few-clue posters get
+  larger clue text instead of empty space. Printed lengths treat only spaces as word breaks (`O'Brien` is `(6)`,
+  `Mother-in-law` is `(6-2-3)`).
 - **Print-ready output.** Vector PDFs with embedded fonts, with 0.125 in bleed and at exact trim size. A PNG preview, an
   11x17 answer key, a letter-size answer sheet, and a letter-size actual-size check page for printing at 100%.
 - **Sizes and styles.** Layouts tuned for 18x24, 24x36 and 36x48 inches. Any other size, including A sizes and landscape,

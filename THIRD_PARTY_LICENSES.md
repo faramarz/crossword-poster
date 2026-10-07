@@ -10,7 +10,7 @@ obligation on this project or on the posters you make. Read each library's own l
 environment that contains them.
 
 The previous PDF library, PyMuPDF (AGPL-3.0 / commercial), is **not** used any more: PDFs are inspected with `pypdf`
-and rasterised with `pypdfium2`. NumPy is no longer a dependency either.
+and rasterised with `pypdfium2`.
 
 ## Runtime dependencies (installed by `pip install crossword-poster`)
 
@@ -41,7 +41,7 @@ Not installed by default and never redistributed with the package.
 
 ## Browser (downloaded separately, not part of this package)
 
-The poster is printed by Chromium, which you install yourself with `python -m playwright install chromium`
+The poster is printed by Chromium, which you install yourself with `crossword-poster install-browser`
 (or point `CROSSWORD_POSTER_CHROMIUM` at an existing Chrome/Chromium). Chromium is distributed under its own
 BSD-style and other open-source licences; see <https://www.chromium.org/chromium-os/licenses/>. Playwright's
 installer also fetches a Node.js driver (MIT) that carries its own notices inside the Playwright wheel.

@@ -24,7 +24,10 @@ def test_ci_workflow_is_valid_and_complete():
     assert matrix == ["3.9", "3.10", "3.11", "3.12", "3.13"]
     assert set(ci["jobs"]["smoke"]["strategy"]["matrix"]["os"]) == {"macos-latest", "windows-latest"}
     commands = " ".join(str(s.get("run", "")) for s in ci["jobs"]["e2e"]["steps"])
-    assert "playwright install --with-deps chromium" in commands
+    assert "crossword-poster install-browser --with-deps" in commands
+    smoke = " ".join(str(s.get("run", "")) for s in ci["jobs"]["smoke"]["steps"])
+    assert "crossword-poster install-browser" in smoke and "crossword-poster sample" in smoke
+    assert (ci.get("on") or ci[True])["push"]["branches"] == ["main"]  # YAML reads a bare `on` as True
     lint = " ".join(str(s.get("run", "")) for s in ci["jobs"]["lint"]["steps"])
     assert "ruff check" in lint and "ruff format --check" in lint
 

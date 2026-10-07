@@ -30,7 +30,7 @@ cd crossword-poster
 python3 -m venv .venv
 source .venv/bin/activate              # Windows (Command Prompt): .venv\Scripts\activate
 pip install -e ".[dev]"
-python -m playwright install chromium  # one-time download; needed for the end-to-end tests
+crossword-poster install-browser  # one-time download; needed for the end-to-end tests
 crossword-poster doctor                # should end with "Everything is ready."
 ```
 
@@ -117,12 +117,7 @@ Some ideas, from small to larger:
 
 - Improve a page in `docs/`: fix a confusing sentence, add a missing step, or add a picture.
 - Translate the beginner guide into another language (open an issue first so work is not duplicated).
-- Warn when the clue text comes out very small (for example under 10 pt), so people notice before they print.
-- Warn when an answer looks like a sentence or a clue (for example five or more words, or a question mark), which usually means
-  the clue and answer columns were swapped.
-- Do not split answers at apostrophes when working out the printed length, so `O'Brien` shows `(6)` rather than `(1,5)`.
 - Add named paper sizes such as `--size A2` and `--size A1`.
-- Run an end-to-end build (not just the unit tests) in the macOS and Windows jobs in CI.
 - Add another small piece of artwork for the `icons` style, such as a balloon or a ring.
 - Add a short screen recording or screenshots of the install steps for each operating system.
 

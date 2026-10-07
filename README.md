@@ -55,18 +55,20 @@ which has exact steps for macOS, Windows and Linux.
 ```bash
 # with pipx
 pipx install git+https://github.com/faramarz/crossword-poster
-pipx run --spec git+https://github.com/faramarz/crossword-poster playwright install chromium
 
 # or with uv
-uv tool install --with-executables-from playwright git+https://github.com/faramarz/crossword-poster
-playwright install chromium
+uv tool install git+https://github.com/faramarz/crossword-poster
+
+# then, with either one, download the browser (once)
+crossword-poster install-browser
 ```
 
 No Git on your computer? Replace `git+https://github.com/faramarz/crossword-poster` with
 `https://github.com/faramarz/crossword-poster/archive/refs/heads/main.zip`.
 
-The second line in each pair downloads Chromium, the browser the tool uses to lay out and print the poster. You do it
-once. It is a download of a few hundred megabytes.
+`install-browser` downloads Chromium, the browser the tool uses to lay out and print the poster. You do it once. It is a
+download of a few hundred megabytes. It runs Playwright's installer with the same Python as the tool, so it works for
+pipx, uv and pip alike. If it ever fails, `crossword-poster doctor` prints the manual command as a fallback.
 
 <details>
 <summary>Plain pip in a virtual environment instead</summary>
@@ -75,7 +77,7 @@ once. It is a download of a few hundred megabytes.
 python3 -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install git+https://github.com/faramarz/crossword-poster
-python -m playwright install chromium
+crossword-poster install-browser
 ```
 
 </details>

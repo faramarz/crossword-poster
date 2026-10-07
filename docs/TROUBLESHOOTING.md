@@ -47,20 +47,19 @@ py -m crossword_poster doctor             # Windows
 
 ### Chromium is missing: "Chromium ... was not found or could not start"
 
-Chromium is the browser engine the tool uses to lay out and print the poster. It is a separate one-time download. Install
-it **with the same Python environment that has crossword-poster**:
+Chromium is the browser engine the tool uses to lay out and print the poster. It is a separate one-time download. Run:
 
-| How you installed the tool | Install Chromium with |
-|---|---|
-| pip in a virtual environment (switched on) | `python -m playwright install chromium` |
-| pipx | `pipx run --spec git+https://github.com/faramarz/crossword-poster playwright install chromium` |
-| uv | `uv tool install --force --with-executables-from playwright git+https://github.com/faramarz/crossword-poster`, then `playwright install chromium` |
+```bash
+crossword-poster install-browser
+```
 
-Then run `crossword-poster doctor` again.
+This works however you installed the tool (pip, pipx or uv), because it runs Playwright's installer with the same Python
+as the tool itself. On Linux add `--with-deps` to install the system libraries too (it uses `sudo`). Then run
+`crossword-poster doctor` again.
 
-**Why not just follow the `doctor` hint?** `doctor` suggests `python -m playwright install chromium`. That works for pip
-and a switched-on virtual environment. With pipx or uv, `python` is not the tool's own environment, so use the commands
-in the table. (Another option with pipx is to install with `pipx install --include-deps git+https://github.com/faramarz/crossword-poster`. That adds a `playwright` command that you can run as `playwright install chromium`.)
+If `install-browser` itself fails, `doctor` prints the manual command with the full path of the Python that the tool
+runs in, in quotes, for example `"/home/sam/.local/pipx/venvs/crossword-poster/bin/python" -m playwright install
+chromium`. Copy and run it as printed. In Windows PowerShell put `& ` in front of the quoted path.
 
 Chromium is stored in a shared folder (`~/.cache/ms-playwright` on Linux, `~/Library/Caches/ms-playwright` on macOS,
 `%LOCALAPPDATA%\ms-playwright` on Windows), and the tool searches there. A Chromium that does not exactly match your
@@ -83,7 +82,7 @@ Playwright version is still found and used.
   The project is tested with the Chromium that Playwright installs. Another browser should work, but if the output looks
   wrong, install the Playwright one.
 - **Linux says a shared library is missing.** Install Chromium's system libraries (Ubuntu and Debian; this uses `sudo`):
-  `python -m playwright install --with-deps chromium`.
+  `crossword-poster install-browser --with-deps`.
 - **The download fails.** A work or school network may block it. Try another network, or ask your IT team to allow
   downloads from `cdn.playwright.dev` and `playwright.download.prss.microsoft.com`.
 
@@ -214,10 +213,11 @@ The tool cannot tell a clue from an answer. If people typed the answer in the cl
 the grid and a single word as the clue. Scan your answer column (sort by it) before you build. See
 [the guide](GUIDE.md#3-clean-and-edit-the-clues).
 
-### The length shown in the clue looks wrong, for example `(1,5)` for `O'Brien`
+### The length shown in the clue is not what I wanted
 
-Words are split at apostrophes and hyphens when the length is worked out. Add an `enumeration` column to your file and type
-the length you want: `6` for `O'Brien`, or `4-3` for `Jean-Luc`. See [the CSV format](CLI.md#the-clues-file).
+Only spaces separate words when the length is worked out. Apostrophes are ignored (`O'Brien` is `(6)`) and a hyphenated
+word keeps its hyphens (`Jean-Luc` is `(4-3)`). To print a different length, add an `enumeration` column to your file
+and type the length you want, such as `6` or `4,3`. See [the CSV format](CLI.md#the-clues-file).
 
 ---
 
