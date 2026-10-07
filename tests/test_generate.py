@@ -120,3 +120,30 @@ def test_load_words_missing_column(tmp_path):
     p.write_text("word\nCAT\n", encoding="utf-8")
     with pytest.raises(UserError, match="no 'grid' column"):
         gen.load_words(str(p))
+
+
+# ------------------------------------------------------- wall-clock budget
+def test_an_expired_deadline_stops_the_search_and_says_so():
+    board, stats = gen.generate_all(WORDS, attempts=1000, seed=1, deadline=0.001)  # long in the past
+    assert board is None
+    assert stats["time_limit_hit"] is True
+
+
+def test_solve_with_an_expired_limit_still_returns_a_layout():
+    sol = gen.solve(WORDS, attempts=1000, seed=1, time_limit=1e-6)
+    assert sol.board.placed  # at least one attempt always runs
+    assert sol.stats["time_limit_hit"] is True
+
+
+def test_a_limit_that_is_not_reached_does_not_change_the_result():
+    plain = gen.solve(WORDS, attempts=60, seed=2, workers=1)
+    timed = gen.solve(WORDS, attempts=60, seed=2, workers=1, time_limit=600)
+    assert grid_of(plain.board) == grid_of(timed.board)
+    assert "time_limit_hit" not in timed.stats
+
+
+def test_long_searches_log_progress(monkeypatch):
+    monkeypatch.setattr(gen, "PROGRESS_EVERY", 0.0)
+    lines = []
+    gen.generate_all(WORDS, attempts=100, seed=1, log=lines.append)
+    assert any("still searching" in ln for ln in lines)

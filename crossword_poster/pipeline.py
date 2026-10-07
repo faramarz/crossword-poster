@@ -54,6 +54,7 @@ class BuildOptions:
     passes: int = 6
     aspect: float = 1.0
     grow_tries: int = 6
+    time_limit: float = 180.0
     block_fill: Optional[str] = None
     grey_fill: str = "#a3a3a3"
     spot_text: str = ""
@@ -156,7 +157,7 @@ def build(opts: BuildOptions, log: Log = lambda m: print(m, flush=True)) -> Buil
     _step(log, 2, total, f"Building the crossword grid ({len(rows)} answers; this can take a minute for big lists)")
     sol = gen.solve(
         [r["grid"] for r in rows], opts.max_width, opts.max_height, opts.attempts, opts.seed, opts.noise, opts.passes,
-        opts.workers, opts.aspect, opts.grow_tries, log=log,
+        opts.workers, opts.aspect, opts.grow_tries, log=log, time_limit=opts.time_limit or None,
     )  # fmt: skip
     by_grid = {r["grid"]: r for r in rows}
     result.left_out = [
@@ -170,6 +171,11 @@ def build(opts: BuildOptions, log: Log = lambda m: print(m, flush=True)) -> Buil
         log(
             "  To fit them: choose a bigger --size, use fewer or shorter answers, raise --attempts, or try another --seed."
         )
+        if sol.stats.get("time_limit_hit"):
+            log(
+                f"  The search stopped at the time limit of {opts.time_limit:g} s. With fewer answers (30 to 60 is "
+                "ideal) it is much quicker; or give it longer with --time-limit."
+            )
         if opts.require_all:
             raise IncompleteGrid("Not every answer fits, and --require-all was given, so no poster was made.")
     placed_rows = [r for r in rows if r["grid"] not in sol.left_out]

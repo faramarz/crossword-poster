@@ -119,6 +119,9 @@ def _build_parser(prog: str = "crossword-poster build") -> argparse.ArgumentPars
         default=6,
         help="times the automatic window is enlarged when nothing fits (default %(default)s)",
     )
+    g.add_argument("--time-limit", type=float, default=BuildOptions.time_limit, metavar="SECONDS",
+                   help="stop searching after this many seconds and use the best layout found; 0 = no limit "
+                   "(default %(default)g)")  # fmt: skip
     g.add_argument("--noise", type=float, default=6.0, help=argparse.SUPPRESS)
     g.add_argument("--passes", type=int, default=6, help=argparse.SUPPRESS)
     g = ap.add_argument_group("look")
@@ -154,7 +157,7 @@ def _options_from_args(a: argparse.Namespace) -> BuildOptions:
         seed=a.seed, attempts=a.attempts, workers=max(1, a.workers), require_all=a.require_all,
         clue_column=a.clue_column, answer_column=a.answer_column, id_column=a.id_column, grid_column=a.grid_column,
         min_len=a.min_len, max_len=a.max_len, max_width=a.max_width, max_height=a.max_height, noise=a.noise,
-        passes=a.passes, aspect=a.aspect, grow_tries=a.grow_tries, block_fill=a.block_fill, grey_fill=a.grey_fill,
+        passes=a.passes, aspect=a.aspect, grow_tries=a.grow_tries, time_limit=max(0.0, a.time_limit), block_fill=a.block_fill, grey_fill=a.grey_fill,
         spot_text=a.spot_text, mode=a.mode, png_width=a.png_width, no_key=a.no_key, no_solution=a.no_solution,
         no_actual_size=a.no_actual_size, no_verify=a.no_verify, no_crops=a.no_crops, verbose=a.verbose,
     )  # fmt: skip

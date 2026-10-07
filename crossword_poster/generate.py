@@ -202,8 +202,16 @@ def _stats(b: Board, offered: int, attempts: int, seed: int, t0: float, **extra)
     return out
 
 
-def generate(words, required=(), W=25, H=25, attempts=100, seed=0, passes=3, noise=6.0):
-    """Best of ``attempts`` randomised builds, placing as many words as possible. Returns (Board, unplaced, stats)."""
+def _past(deadline: Optional[float]) -> bool:
+    """True once the wall-clock ``deadline`` (a ``time.time()`` value) has passed."""
+    return deadline is not None and time.time() > deadline
+
+
+def generate(words, required=(), W=25, H=25, attempts=100, seed=0, passes=3, noise=6.0, deadline=None):
+    """Best of ``attempts`` randomised builds, placing as many words as possible. Returns (Board, unplaced, stats).
+
+    Stops early once ``deadline`` has passed (at least one attempt always runs).
+    """
     req = [w.upper() for w in required]
     pool = list(dict.fromkeys(req + [w for w in words if w not in req]))
     if not pool:
@@ -211,6 +219,8 @@ def generate(words, required=(), W=25, H=25, attempts=100, seed=0, passes=3, noi
     best, best_score = None, -(10**9)
     t0 = time.time()
     for k in range(attempts):
+        if k and _past(deadline):
+            break
         b, _ = _attempt(pool, W, H, seed, k, noise, passes, req)
         have = {p[0] for p in b.placed}
         s = b.score() + (0 if all(r in have for r in req) else -(10**6))  # required words must all be present
@@ -233,9 +243,11 @@ def layout_cost(b: Board, aspect: float) -> float:
 
 
 def _run_chunk(args):
-    words, W, H, seed, ks, noise, passes, aspect = args
+    words, W, H, seed, ks, noise, passes, aspect, deadline = args
     best, ok = None, 0
     for k in ks:
+        if _past(deadline):
+            break
         b, left = _attempt(words, W, H, seed, k, noise, passes)
         if left:
             continue
@@ -269,6 +281,9 @@ def _map_chunks(chunks: list) -> list:
     return [_run_chunk(c) for c in chunks]
 
 
+PROGRESS_EVERY = 5.0  # seconds between "still searching" lines
+
+
 def generate_all(
     words,
     W=None,
@@ -282,13 +297,20 @@ def generate_all(
     grow_tries: int = 6,
     grow: float = 1.15,
     log: Log = None,
+    deadline: Optional[float] = None,
 ):
     """Place EVERY word. Returns (Board | None, stats).
 
     Of all complete layouts found, the one with the lowest :func:`layout_cost` wins (small and close to ``aspect``).
 
     If W and H are both omitted they are estimated and grown by ``grow`` after each failed round (up to
-    ``grow_tries`` times); a bound given explicitly is never grown (an omitted one is estimated). Deterministic for a given (words, bounds, attempts, seed), whatever ``workers`` is.
+    ``grow_tries`` times); a bound given explicitly is never grown (an omitted one is estimated).
+    Deterministic for a given (words, bounds, attempts, seed), whatever ``workers`` is, as long as the search is not
+    cut short.
+
+    ``deadline`` (a ``time.time()`` value) stops the search early, and ``stats["time_limit_hit"]`` is then True.
+    Attempts run in a few batches so that progress can be logged every few seconds; the batching does not change
+    which layout wins.
     """
     words = list(dict.fromkeys(words))
     if not words:
@@ -300,14 +322,25 @@ def generate_all(
     longest = max(len(w) for w in words)
     t0 = time.time()
     rounds = (grow_tries + 1) if auto else 1
+    timed_out = False
     for rnd in range(rounds):
         W, H = max(W, longest), max(H, longest)
         n = max(1, min(workers, attempts))
-        res = _map_chunks([(words, W, H, seed, list(range(attempts))[i::n], noise, passes, aspect) for i in range(n)])
-        ok = sum(r[1] for r in res)
-        found = [r[0] for r in res if r[0]]
+        batch = max(n * 8, -(-attempts // 5))
+        done, ok, found, last_log = 0, 0, [], time.time()
+        while done < attempts and not timed_out:
+            ks = list(range(done, min(attempts, done + batch)))
+            res = _map_chunks([(words, W, H, seed, ks[i::n], noise, passes, aspect, deadline) for i in range(n)])
+            ok += sum(r[1] for r in res)
+            found += [r[0] for r in res if r[0]]
+            done += len(ks)
+            timed_out = _past(deadline)
+            if log and not timed_out and done < attempts and time.time() - last_log >= PROGRESS_EVERY:
+                last_log = time.time()
+                log(f"  still searching ({W}x{H} window): {done} of {attempts} layouts tried, {ok} complete, "
+                    f"{time.time() - t0:.0f} s so far")  # fmt: skip
         if log:
-            log(f"  window {W}x{H}: {ok} complete layouts in {attempts} attempts")
+            log(f"  window {W}x{H}: {ok} complete layouts in {done} attempts")
         if found:
             _, placed, k = max(found, key=lambda x: x[0])
             b = Board(W, H)
@@ -324,11 +357,18 @@ def generate_all(
                 bound=[W, H],
                 required_missing=[],
             )
+            if timed_out:
+                stats["time_limit_hit"] = True
             return b, stats
+        if timed_out:
+            break
         if rnd < rounds - 1:
             W, H = int(math.ceil(W * grow)), int(math.ceil(H * grow))
-    return None, {"words_offered": len(words), "attempts": attempts, "seed": seed, "bound": [W, H],
-                  "seconds": round(time.time() - t0, 2), "required_missing": words}  # fmt: skip
+    stats = {"words_offered": len(words), "attempts": attempts, "seed": seed, "bound": [W, H],
+             "seconds": round(time.time() - t0, 2), "required_missing": words}  # fmt: skip
+    if timed_out:
+        stats["time_limit_hit"] = True
+    return None, stats
 
 
 # -------------------------------------------------------- resilient solver
@@ -368,6 +408,7 @@ def solve(
     aspect: float = 1.0,
     grow_tries: int = 6,
     log: Log = None,
+    time_limit: Optional[float] = None,
 ) -> Solution:
     """Find a grid for ``words``, trying hard to place every one and degrading gracefully.
 
@@ -375,8 +416,11 @@ def solve(
     2. If no layout holds every word: three times as many attempts in a larger window (explicit bounds stay fixed).
     3. If that fails too: the best partial layout; the words that did not fit are reported in ``Solution.left_out``.
     Words that share no letter with any other word are left out immediately, since they can never cross anything.
-    The result depends only on the inputs and ``seed``, not on ``workers`` or timing.
+    The result depends only on the inputs and ``seed``, not on ``workers`` or timing, unless ``time_limit`` (seconds
+    of wall-clock time, None for no limit) is reached: the search then stops, the best layout so far is used and
+    ``stats["time_limit_hit"]`` is True.
     """
+    deadline = time.time() + time_limit if time_limit else None
     words = list(dict.fromkeys(words))
     left_out = dict.fromkeys(
         _isolated(words), "shares no letters with the other answers, so it cannot cross any of them"
@@ -388,12 +432,12 @@ def solve(
         )
     log = log or (lambda _m: None)
     explicit = max_width is not None or max_height is not None
-    common = dict(noise=noise, passes=passes, workers=workers, aspect=aspect, log=log)
+    common = dict(noise=noise, passes=passes, workers=workers, aspect=aspect, log=log, deadline=deadline)
     stats: dict = {}
     b = None
     if not left_out:
         b, stats = generate_all(usable, max_width, max_height, attempts, seed, grow_tries=grow_tries, **common)
-    if b is None and not left_out:
+    if b is None and not left_out and not stats.get("time_limit_hit"):
         log("  no complete layout yet; trying again with more attempts and a larger window")
         bw, bh = stats.get("bound") or auto_bounds(usable, aspect)
         if not explicit:
@@ -401,6 +445,7 @@ def solve(
         b, stats = generate_all(usable, bw, bh, attempts * 3, seed, grow_tries=0 if explicit else 3, **common)
     if b is not None:
         return Solution(b, left_out, stats)
+    hit = bool(stats.get("time_limit_hit"))
     bw, bh = stats.get("bound") or (
         max_width or auto_bounds(usable, aspect)[0],
         max_height or auto_bounds(usable, aspect)[1],
@@ -410,10 +455,18 @@ def solve(
         b, stats = generate_all(usable, max_width, max_height, attempts, seed, grow_tries=grow_tries, **common)
         if b is not None:
             return Solution(b, left_out, stats)
+        hit = hit or bool(stats.get("time_limit_hit"))
         bw, bh = stats["bound"]
+    if hit:
+        log(f"  the time limit ({time_limit:g} s) ran out before every answer was placed; using the best layout found")
     log(f"  placing as many words as possible in a {bw}x{bh} window")
-    b, unplaced, stats = generate(usable, (), bw, bh, attempts, seed, passes, noise)
+    # the fallback gets a little extra time so that a limit that ran out still ends with a layout
+    b, unplaced, stats = generate(
+        usable, (), bw, bh, attempts, seed, passes, noise, deadline=time.time() + 5 if hit else deadline
+    )
     stats["bound"] = [bw, bh]
+    if hit:
+        stats["time_limit_hit"] = True
     for w in unplaced:
         left_out[w] = "could not be fitted into the grid"
     return Solution(b, left_out, stats)
@@ -545,6 +598,13 @@ def main(argv: Optional[list] = None) -> int:
         default=6,
         help="--all, estimated window: times to enlarge it by 15%% when nothing fits",
     )
+    ap.add_argument(
+        "--time-limit",
+        type=float,
+        default=0,
+        metavar="SECONDS",
+        help="stop searching after this many seconds (default: no limit)",
+    )
     ap.add_argument("--out-json", help="write the grid as JSON here")
     ap.add_argument("--out-txt", help="write the text preview here")
     a = ap.parse_args(argv)
@@ -561,18 +621,30 @@ def main(argv: Optional[list] = None) -> int:
         with open(a.csv, newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
                 clues.setdefault((row.get(a.column) or "").strip().upper(), row.get(a.clue_column, ""))
+    deadline = time.time() + a.time_limit if a.time_limit > 0 else None
     if a.all:
         b, stats = generate_all(words, a.max_width, a.max_height, a.attempts, a.seed, a.noise, a.passes or 6,
-                                a.workers, a.aspect, a.grow_tries, log=lambda m: print(m, file=sys.stderr))  # fmt: skip
+                                a.workers, a.aspect, a.grow_tries, log=lambda m: print(m, file=sys.stderr),
+                                deadline=deadline)  # fmt: skip
         if b is None:
             raise UserError(
-                "No layout places every word.",
-                "raise --attempts, --max-width/--max-height or --grow-tries, or drop --all",
+                "No layout places every word"
+                + (f" within {a.time_limit:g} s." if stats.get("time_limit_hit") else "."),
+                "use fewer words (30 to 60 is ideal), or raise --time-limit, --attempts, --max-width/--max-height "
+                "or --grow-tries, or drop --all",
             )
         unplaced = []
     else:
         b, unplaced, stats = generate(
-            words, req, a.max_width or 25, a.max_height or 25, a.attempts, a.seed, a.passes or 3, a.noise
+            words,
+            req,
+            a.max_width or 25,
+            a.max_height or 25,
+            a.attempts,
+            a.seed,
+            a.passes or 3,
+            a.noise,
+            deadline=deadline,
         )
     res = to_result(b, unplaced, stats, clues)
     txt = preview(res)
