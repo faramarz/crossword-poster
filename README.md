@@ -9,7 +9,7 @@ Give it a CSV with one clue and one answer per row. It builds a free-form (loose
 
 ![Sample poster, 18x24, black](docs/sample_18x24_black.png)
 
-*The sample above is built from the synthetic data in `examples/sample_clues.csv` (56 generic trivia clues):
+*The sample above is built from the fictional birthday clues in `examples/sample_birthday.csv` ("Alex's 50th"):
 18x24 in, solid black blocks. Below: the same data at 24x36 in with grey blocks, which saves ink.*
 
 ![Sample poster, 24x36, grey](docs/sample_24x36_grey.png)
@@ -17,58 +17,50 @@ Give it a CSV with one clue and one answer per row. It builds a free-form (loose
 ## Features
 
 - One command, end to end: pool -> grid -> validate -> render -> verify.
-- Every answer is required: the generator searches many randomized layouts and keeps the smallest complete one.
+- Every answer is placed when possible: the generator searches many randomized layouts and keeps the most compact complete one; if none exists it says which answers were left out.
 - Any trim size (tuned for 18x24, 24x36 and 36x48 in; others are scaled), 0.125 in bleed, trim-size PDF, PNG preview.
 - Layout fit loop: finds the largest box size that still lets all clues fit at a readable size, wrapping clue columns
   beside the grid when that gives bigger boxes.
 - Variants: solid black, grey (ink saving), or black with reversed-out spot icons; `--block-fill` for any colour.
 - Extras: answer key (11x17), solution sheet (letter), actual-size check page, independent grid validator, output
   verifier (page sizes, embedded fonts, colours, margins, every clue exactly once, per-cell strokes).
-- An earlier "classic" renderer with three more styles (Broadsheet, Courtside, Mono).
 
 ## Install
 
 ```bash
-git clone <this repository> crossword-poster && cd crossword-poster
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium            # or point CROSSWORD_CHROMIUM at an existing Chromium/Chrome
+pip install git+https://github.com/faramarz/crossword-poster
+python -m playwright install chromium     # one-time download of the browser that prints the poster
+crossword-poster doctor                   # checks Python, fonts and Chromium, and tells you how to fix anything
 ```
 
-Python 3.9+. **Chromium is required** for layout and PDF output. Resolution order: the `CROSSWORD_CHROMIUM` environment
-variable (path to an executable), then Playwright's own browser, then auto-detection (`PLAYWRIGHT_BROWSERS_PATH`,
-`~/.cache/ms-playwright`, `chromium`/`google-chrome` on `PATH`).
-
-Fonts: Archivo Narrow, Oswald, Bebas Neue and DM Sans are included in `fonts/` with their SIL OFL licence texts. The
-main renderer needs only Archivo Narrow and Oswald. For the classic renderer's styles A and M run
-`scripts/fetch_fonts.sh` once (needs `pip install fonttools`). See [fonts/README.md](fonts/README.md).
+Python 3.9+. **Chromium is required** for layout and PDF output. Set `CROSSWORD_POSTER_CHROMIUM` to the path of an
+existing Chromium/Chrome to use that instead. The fonts (Archivo Narrow, Oswald, SIL OFL) ship inside the package.
+For `.xlsx` clue files: `pip install "crossword-poster[xlsx]"`. Licences: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Quick start
 
 ```bash
-python -m crossword_poster build --clues examples/sample_clues.csv --size 24x36 --style grey --out out/ \
-    --title "My Crossword" --byline "Trivia for everyone"
+crossword-poster sample --out my-first-poster          # builds the bundled birthday example
+crossword-poster template my_clues.csv                 # a starter file to fill in
+crossword-poster build --clues my_clues.csv --title "Sam's 50th" --subtitle "From everyone who loves you" \
+    --size 24x36 --style grey --out poster/
 ```
 
-Run from the repository root (or put it on `PYTHONPATH`). Results appear under `out/`:
+Results appear in `poster/`:
 
 ```
-out/
-  pool.csv  pool_report.json          normalised clue pool, skipped rows, "giveaway" clues
-  grid.json  grid.txt  clues.csv      the grid, a text preview, the numbered clue list
-  24x36/
-    C_grey/poster.pdf                 24.25 x 36.25 in: trim + 0.125 in bleed on every side
-    C_grey/poster_trim.pdf            exactly 24 x 36 in
-    C_grey/poster.png                 preview
-    key.pdf                           11x17 answer key
-    actual_size_check_letter.pdf      letter page, print at 100%
-    fit.json                          chosen layout (box size, clue font size, columns) + DOM checks
-  solution_letter.pdf  .png           letter-size filled grid
-  checks/                             corner crops and per-cell stroke check images
+poster_24x36_grey_bleed.pdf        print this one: trim + 0.125 in bleed on every side
+poster_24x36_grey_trim.pdf         exactly 24 x 36 in, for printers that add their own bleed
+poster_24x36_grey_preview.png      picture preview
+answer_key_24x36_11x17.pdf         the poster scaled to 11x17 with the answers filled in
+answer_sheet_letter.pdf  .png      letter-size filled grid
+actual_size_check_24x36.pdf        letter page: print at 100% to judge the real box and type sizes
+clues_and_answers.csv              numbered list of every clue and answer
+details/                           working files: grid.json, pool_report.json, per-size folders, checks/
 ```
 
-Style folders: `A_black` (`--style black`), `C_grey` (`grey`), `B_spot` (`icons`); `--style all` builds all three.
-
+The run ends with a summary: the files written, the square size in inches and mm, the clue font size, and any answers
+that could not be placed. Styles: `grey` (default), `black`, `icons` (black with a cake and party hat), or `all`.
 Several sizes in one go: `--size 18x24,24x36,36x48`. `scripts/build_all.sh CLUES.csv OUT` builds every size and style.
 
 ### Your own clues
@@ -76,79 +68,48 @@ Several sizes in one go: `--size 18x24,24x36,36x48`. `scripts/build_all.sh CLUES
 Put private data in `data/` (gitignored; see [data/README.md](data/README.md)):
 
 ```bash
-python -m crossword_poster build --clues data/my_clues.csv --clue-column Clue --answer-column Answer \
-    --id-column No --size 24x36 --style black --title "Pub Quiz" --byline "Questions from the quiz team" --out out/
+crossword-poster build --clues data/my_clues.csv --clue-column Clue --answer-column Answer \
+    --id-column No --size 24x36 --style black --title "Pub Quiz" --subtitle "Questions from the quiz team" --out out/
 ```
 
-Input CSV: one row per entry; the answer may contain spaces, hyphens and accents ("Big Ben", "Café"). The grid word is
-the answer folded to A-Z (`BIGBEN`); multi-word answers get an enumeration such as `(3,3)` appended to the clue
-automatically. Rows with an empty clue/answer, an answer outside 3-15 letters (`--min-len/--max-len`) or a duplicate
-answer are skipped and listed in the report. The pool step also flags *giveaways*: clues that contain another entry's
-answer as a whole word.
+Input: a CSV (UTF-8 with or without BOM, or Excel's CSV; `.xlsx` with the extra) with a header row. The clue and answer
+columns are found by name, case-insensitively (`clue`/`clues`/`question`, `answer`/`answers`/`word`); optional columns
+are `id` and `enumeration`. Blank rows are skipped; rows with a missing clue or answer are listed by row number. The
+grid word is the answer folded to A-Z (`BIGBEE` style, accents and punctuation dropped); multi-word answers get an
+enumeration such as `(3,3)` unless the clue already has one. Answers with digits or other alphabets, shorter than 2 or
+longer than 20 letters (`--min-len/--max-len`) are skipped with an explanation; duplicate answers keep the first.
+If not every answer fits, the search retries with more attempts and a bigger window, then builds the poster without
+the leftovers and lists them (`--require-all` turns that into an error). Clue text is always printed literally.
 
 ### Running the steps individually
 
 ```bash
-python -m crossword_poster pool      --clues examples/sample_clues.csv --out out/pool.csv
-python -m crossword_poster generate  --csv out/pool.csv --all --attempts 2000 --seed 1 --workers 4 \
-                                     --clue-column clue --out-json out/raw.json --out-txt out/raw.txt
-python -m crossword_poster validate  out/grid.json --pool out/pool.csv
-python -m crossword_poster render    out/grid.json --trim 24x36 --outroot out --make A,C,key --title "My Crossword"
-python -m crossword_poster render    out/grid.json --solution --outroot out --title "My Crossword"
-python -m crossword_poster actual-size --from-fit out/24x36 --variant A_black --title "My Crossword"
-python -m crossword_poster verify    out --title "My Crossword"
-python -m crossword_poster transpose out/grid.json out/transposed      # wide <-> tall layout
-python -m crossword_poster render-classic out/grid.json --style M --outdir out/classic --title "My Crossword"
+crossword-poster pool      --clues my_clues.csv --out out/pool.csv
+crossword-poster generate  --csv out/pool.csv --all --attempts 2000 --seed 1 --workers 4 --clue-column clue --out-json out/raw.json
+crossword-poster validate  out/details/grid.json --pool out/details/pool.csv
+crossword-poster render    out/details/grid.json --trim 24x36 --outroot out/details --make A,C,key --title "My Crossword"
+crossword-poster render    out/details/grid.json --solution --outroot out/details --title "My Crossword"
+crossword-poster actual-size --from-fit out/details/24x36 --variant A_black --title "My Crossword"
+crossword-poster verify    out/details --title "My Crossword"
+crossword-poster transpose out/details/grid.json out/transposed      # wide <-> tall layout
 ```
 
-`generate` alone writes only the bare grid (`raw.json` has no clues); `build` attaches the clues from the pool
-(`generate.attach_pool`) and writes `grid.json`, which is what `validate`, `render` and `verify` expect. The same tools are
-available as plain scripts in `scripts/` (`make_pool.py`, `generate.py`, `validate.py`, `render_news.py`,
-`render_classic.py`, `actual_size.py`, `verify.py`, `crops.py`, `transpose.py`).
+`generate` alone writes only the bare grid; `build` attaches the clues and writes `details/grid.json`, which `validate`,
+`render` and `verify` expect. `python -m crossword_poster ...` is equivalent to `crossword-poster ...`.
 
 ## CLI reference
 
-### `build`
+`crossword-poster --help` lists the commands; `crossword-poster <command> --help` shows every option. Exit status:
+0 success, 1 built but needs attention (checks failed, or `--require-all` with leftovers), 2 problem with the input or
+options, 3 the computer is missing something (Chromium; run `doctor`).
 
-| Option | Default | Meaning |
-|---|---|---|
-| `--clues CSV` | required | input clues |
-| `--clue-column`, `--answer-column` | `clue`, `answer` | column names |
-| `--id-column`, `--grid-column` | none | optional unique id / pre-normalised grid word columns |
-| `--min-len`, `--max-len` | 3, 15 | allowed grid-word length |
-| `--max-width`, `--max-height` | auto | search window in cells; auto = estimated from the letter count and grown (x1.15, up to `--grow-tries`) until a complete layout is found |
-| `--attempts` | 1000 | randomized layouts per window |
-| `--seed` | 1 | RNG seed; same inputs + seed = same grid, whatever `--workers` is |
-| `--workers` | up to 4 | parallel processes |
-| `--noise`, `--passes`, `--aspect`, `--grow-tries` | 6, 6, 0.8, 6 | generator tuning (see below) |
-| `--size` | `24x36` | trim size(s) `WxH` in inches, comma separated |
-| `--style` | `black` | `black`, `grey`, `icons` or `all` |
-| `--block-fill COLOR` | none | one CSS colour for the non-letter squares of every variant (env `BLOCK_FILL` also honoured) |
-| `--grey-fill COLOR` | `#a3a3a3` | the grey of `--style grey`, the key and the solution sheet |
-| `--title`, `--byline` (alias `--subtitle`) | `My Crossword`, `A custom crossword poster.` | header text |
-| `--spot-text TEXT` | none | text reversed out of the widest void in the `icons` style (the cake and party hat are always used) |
-| `--mode` | `any` | `full` forbids the wrap layout (clues only beneath the grid) |
-| `--png-width` | 1200 | preview width in pixels |
-| `--out` | `out` | output directory |
-| `--no-key`, `--no-solution`, `--no-actual-size`, `--no-verify`, `--no-crops` | | skip an output / check |
-
-Exit status is non-zero if the grid cannot be completed, validation fails, rendering fails or any verification check fails.
-
-### Other commands
-
-| Command | Purpose | Main options |
-|---|---|---|
-| `pool` | clue CSV -> normalised pool + report | `--clues --clue-column --answer-column --grid-column --id-column --min-len --max-len --out` |
-| `generate` | grid generator | `--csv --column --clue-column --max-width --max-height --attempts --seed --min-len --max-len --required --subset --all --workers --noise --passes --aspect --grow-tries --out-json --out-txt` |
-| `validate` | independent grid check | `GRID [MAXROWS MAXCOLS] --pool POOL.csv` |
-| `render` | newspaper renderer | `GRID --trim --outroot --make A,B,C,key --solution --block-fill --grey-fill --title --byline --spot-text --mode --png-width --build-dir --quiet` |
-| `render-classic` | styles A / B / M | `GRID --style --csv --outdir --prefix --make poster,trim,key,test,solution_letter --trim --cell --cell-min --font --font-min --title --subtitle --kicker --est --edition --footer --clue-cols --margin ...` |
-| `actual-size` | 100% check page | `POSTER_TRIM.pdf OUT.pdf LABEL BOX_IN CLUE_PT NUM_PT`, or `--from-fit SIZE_DIR` |
-| `verify` | output checks | `OUTROOT --title --byline --sizes --block-fill --no-crops` |
-| `crops` | corner crops + stroke check | `OUTROOT --sizes` |
-| `transpose` | swap rows and columns | `GRID OUT_DIR` |
-
-`python -m crossword_poster <command> --help` shows every option.
+| Command | Purpose |
+|---|---|
+| `build` | the whole pipeline (see `build --help`: `--clues --title --subtitle --size --style --out --seed --require-all` plus reading, search, look and skip options) |
+| `sample` | build the bundled fictional birthday crossword (`--out --size --style --seed`) |
+| `template OUT.csv` | write a starter clues file |
+| `doctor` | check Python, libraries, fonts and Chromium |
+| `pool`, `generate`, `validate`, `render`, `verify`, `actual-size`, `crops`, `transpose` | single stages for power users |
 
 ## Design notes
 
@@ -196,7 +157,7 @@ letters alone.
 
 - Free-form layout only: no rotational symmetry, no black-square patterns, no dictionary fill. Answers are placed as given,
   so very short or letter-poor answers (few vowels) cross less and need more attempts.
-- Answers are folded to A-Z; other scripts are not supported. Length 3-15 letters by default.
+- Answers are folded to A-Z; other scripts are not supported. Length 2-20 letters by default.
 - Clues are not rewritten. The giveaway check is a whole-word match only; check that clues are clues, not answers.
 - Needs Chromium (Playwright) for layout; layout is tuned for Latin text in Archivo Narrow / Oswald.
 - The fit loop optimises box size first. With few clues on a large trim you get large boxes and empty space at the foot; with
@@ -208,25 +169,23 @@ letters alone.
 ## Tests
 
 ```bash
-python -m unittest discover -s tests -v      # or: pytest tests
+pip install -e ".[dev]"
+pytest -m "not e2e"     # fast unit tests
+pytest                  # also the end-to-end tests (needs Chromium; skipped if it cannot start)
+ruff check . && ruff format --check .
 ```
-
-`tests/test_smoke.py` builds the pool and grid for the sample, validates it, checks determinism and that the validator
-rejects a corrupted grid; if Playwright and Chromium are available it also runs the end-to-end build at 18x24 and checks
-the PDF page sizes (18.25 x 24.25 in with bleed, 18 x 24 trim), the PNG and the extra outputs.
 
 ## Repository layout
 
 ```
-crossword_poster/   package: cli, pool, generate, validate, render_news, render_classic, actual_size, verify, crops, transpose
-scripts/            thin wrappers, build_all.sh, build_sample.sh, fetch_fonts.sh
-examples/           sample_clues.csv (synthetic trivia)
-fonts/              OFL fonts + licence texts
-docs/               README images
-data/               your private inputs (gitignored)
-tests/              smoke test
+crossword_poster/   package: cli, pipeline, pool, generate, validate, render_news, actual_size, verify, crops, pdfutil, ...
+crossword_poster/fonts/    bundled OFL fonts and licence texts      crossword_poster/samples/   bundled sample clues
+examples/           sample_birthday.csv (fictional), sample_clues.csv (generic trivia)
+scripts/            build_all.sh, build_sample.sh, check_licenses.sh
+docs/               preview images, ARCHITECTURE.md
+tests/              pytest suite
 ```
 
 ## Licence
 
-Code: MIT (see `LICENSE`). Fonts: SIL Open Font License 1.1, see `fonts/<Family>/OFL.txt`.
+Code: MIT (see `LICENSE`). Fonts: SIL Open Font License 1.1, see `crossword_poster/fonts/<Family>/OFL.txt`. Dependencies: see `THIRD_PARTY_LICENSES.md`.
