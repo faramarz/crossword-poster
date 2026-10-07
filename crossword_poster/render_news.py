@@ -2,39 +2,79 @@
 
 Design: full-width header (heavy condensed caps title left, byline right, rule under), solid-fill freeform grid
 (every non-letter cell inside the bounding rectangle is a filled square), clue columns of one width and one gutter that
-run beside the grid (wrap layout) and/or beneath it, filled by a JS column-pour with a fit loop.
+run beside the grid (wrap layout) and/or beneath it, filled by a JavaScript column-pour with a fit loop.
 
 Per size it writes (OUT = --outroot/<size>):
-  A_black/poster.pdf (+0.125 in bleed), poster_trim.pdf, poster.png     solid black blocks      (--make A)
-  B_spot/ ...                                                            black + reversed-out spot icons (--make B)
-  C_grey/ ...                                                            grey blocks, saves ink  (--make C)
-  key.pdf                                                                11x17 answer key (the poster, scaled, letters filled)
-  fit.json                                                               chosen layout + verification report
-and, once per run with --solution, OUTROOT/solution_letter.pdf/.png (letter-size filled solution).
+  A_black/poster.pdf (+0.125 in bleed), poster_trim.pdf, poster.png   solid black blocks            (--make A)
+  B_spot/ ...                                                          black + reversed-out icons    (--make B)
+  C_grey/ ...                                                          grey blocks, saves ink        (--make C)
+  key.pdf                                                              11x17 answer key (the poster, scaled, letters filled)
+  fit.json                                                             chosen layout + verification report
+and, once per run with --solution, OUTROOT/solution_letter.pdf/.png (the letter-size filled solution).
 
 Usage:
-  python -m crossword_poster render out/grid.json --trim 24x36 --outroot out --make A,C,key --title "My Crossword"
-  python -m crossword_poster render out/grid.json --solution --outroot out --title "My Crossword"
+  crossword-poster render out/details/grid.json --trim 24x36 --outroot out/details --make A,C,key --title "My Crossword"
+  crossword-poster render out/details/grid.json --solution --outroot out/details --title "My Crossword"
 Sizes: any WxH in inches. 18x24, 24x36 and 36x48 have tuned settings; other sizes are scaled from the nearest one.
 Fills: --block-fill COLOR forces one colour for every variant; otherwise A/B use black, C/key/solution use --grey-fill.
 """
+
+from __future__ import annotations
+
 import argparse
 import json
 import os
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
-from .common import BLEED, font_face, launch, parse_size, png_preview, run_pdf
+from .common import BLEED, browser_context, font_face, parse_size, png_preview, run_pdf
+from .errors import UserError
+from .pool import ENUM_RE
 
 DEFAULT_TITLE = "My Crossword"
 DEFAULT_BYLINE = "A custom crossword poster."
 
 # tuned per-trim-size knobs (inches / points); other sizes are derived by scaling the nearest of these
 SIZES = {
-    "24x36": dict(margin=0.5, gutter=0.20, fs_min=11.0, fs_max=18.0, cell_min=0.45, rule=3.0, sw=1.0, outer=3.0, clue_weight=400, tmax=140),
-    "18x24": dict(margin=0.5, gutter=0.15, fs_min=8.0, fs_max=14.0, cell_min=0.33, rule=2.5, sw=0.75, outer=2.5, clue_weight=500, tmax=110),
-    "36x48": dict(margin=0.75, gutter=0.30, fs_min=16.5, fs_max=27.0, cell_min=0.675, rule=4.5, sw=1.5, outer=4.5, clue_weight=400, tmax=210),
+    "24x36": dict(
+        margin=0.5,
+        gutter=0.20,
+        fs_min=11.0,
+        fs_max=18.0,
+        cell_min=0.45,
+        rule=3.0,
+        sw=1.0,
+        outer=3.0,
+        clue_weight=400,
+        tmax=140,
+    ),
+    "18x24": dict(
+        margin=0.5,
+        gutter=0.15,
+        fs_min=8.0,
+        fs_max=14.0,
+        cell_min=0.33,
+        rule=2.5,
+        sw=0.75,
+        outer=2.5,
+        clue_weight=500,
+        tmax=110,
+    ),
+    "36x48": dict(
+        margin=0.75,
+        gutter=0.30,
+        fs_min=16.5,
+        fs_max=27.0,
+        cell_min=0.675,
+        rule=4.5,
+        sw=1.5,
+        outer=4.5,
+        clue_weight=400,
+        tmax=210,
+    ),
 }
 
 
@@ -60,7 +100,10 @@ def analyse(gj):
     g = gj["grid"]
     R, C = len(g), len(g[0])
     cells = {(r, c): (g[r][c] or "").upper() for r in range(R) for c in range(C) if (g[r][c] or "").strip()}
-    has = lambda r, c: (r, c) in cells
+
+    def has(r, c):
+        return (r, c) in cells
+
     nums, entries, n = {}, [], 0
     for r in range(R):
         for c in range(C):
@@ -85,7 +128,7 @@ def analyse(gj):
         x = by[(e["direction"], e["number"])]
         assert re.sub(r"[^A-Z]", "", x["answer"].upper()) == e["answer"], (e, x)
         t = re.sub(r"\s+", " ", x["clue"]).strip()
-        if not re.search(r"\(\d+(,\d+)*\)\s*$", t):
+        if not ENUM_RE.search(t):
             t += f" ({len(e['answer'])})"
         e["text"] = t
         e["id"] = x.get("id") or x.get("source")
@@ -124,7 +167,7 @@ def find_voids(an, minw=3, minh=3, k=8):
             break
         _, r0, c0, hh, w = best
         res.append(dict(r=r0, c=c0, h=hh, w=w))
-        for r in range(r0 - 1, r0 + hh + 1):          # keep a one-cell moat between chosen voids
+        for r in range(r0 - 1, r0 + hh + 1):  # keep a one-cell moat between chosen voids
             for c in range(c0 - 1, c0 + w + 1):
                 if 0 <= r < R and 0 <= c < C:
                     used[r][c] = True
@@ -144,14 +187,16 @@ def pick_icons(an, n=3, spot_text=""):
             break
         # spread: require some distance from already chosen
         cx, cy = v["c"] + v["w"] / 2, v["r"] + v["h"] / 2
-        if all(((cx - (u["c"] + u["w"] / 2)) / C) ** 2 + ((cy - (u["r"] + u["h"] / 2)) / R) ** 2 > 0.06 for u in chosen):
+        if all(
+            ((cx - (u["c"] + u["w"] / 2)) / C) ** 2 + ((cy - (u["r"] + u["h"] / 2)) / R) ** 2 > 0.06 for u in chosen
+        ):
             chosen.append(v)
     for v in voids:
         if len(chosen) >= n:
             break
         if v not in chosen:
             chosen.append(v)
-    chosen.sort(key=lambda v: -(v["w"] / v["h"]))   # widest first
+    chosen.sort(key=lambda v: -(v["w"] / v["h"]))  # widest first
     kinds = ["text", "cake", "hat"] if spot_text else ["cake", "hat"]
     out = []
     for kind, v in zip(kinds, chosen):
@@ -161,12 +206,14 @@ def pick_icons(an, n=3, spot_text=""):
 
 # ----------------------------------------------------------------------- HTML
 def font_faces():
-    return "\n".join([
-        font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Regular.ttf", 400),
-        font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Medium.ttf", 500),
-        font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Bold.ttf", 700),
-        font_face("Oswald", "Oswald", "Oswald-Bold.ttf", 700),
-    ])
+    return "\n".join(
+        [
+            font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Regular.ttf", 400),
+            font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Medium.ttf", 500),
+            font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Bold.ttf", 700),
+            font_face("Oswald", "Oswald", "Oswald-Bold.ttf", 700),
+        ]
+    )
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>poster</title><style>
@@ -199,7 +246,7 @@ body{font-family:'Archivo Narrow',sans-serif;color:#000}
 const D=__DATA__;
 const IN=96,PT=96/72,NS='http://www.w3.org/2000/svg';
 const $=id=>document.getElementById(id);
-const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const items=[];
 for(const dir of ['across','down']){
   items.push({head:true,label:dir.toUpperCase()});
@@ -505,13 +552,14 @@ document.fonts.ready.then(async()=>{
 </script></body></html>"""
 
 
-def _js_json(obj):
+def _js_json(obj) -> str:
     """JSON safe to embed inside a <script> element."""
     return json.dumps(obj).replace("</", "<\\/").replace("<!--", "<\\!--")
 
 
 def build_data(an, tcfg, cw, ch, key=False, icons=None, fill="#000000", title=DEFAULT_TITLE, byline=DEFAULT_BYLINE):
-    cells = [dict(r=r, c=c, l=l, n=an["nums"].get((r, c), 0)) for (r, c), l in sorted(an["cells"].items())]
+    """The data object handed to the page's JavaScript (grid cells, clues, sizes, title)."""
+    cells = [dict(r=r, c=c, l=letter, n=an["nums"].get((r, c), 0)) for (r, c), letter in sorted(an["cells"].items())]
     return dict(
         rows=an["rows"], cols=an["cols"], cells=cells, entries=an["entries"], key=key, icons=icons or [], blockFill=fill,
         W=cw, H=ch, g=tcfg["gutter"], fsMin=tcfg["fs_min"], fsMax=tcfg["fs_max"], cellMin=tcfg["cell_min"],
@@ -519,155 +567,259 @@ def build_data(an, tcfg, cw, ch, key=False, icons=None, fill="#000000", title=DE
         title=title, byline=byline,
         tfracs=tcfg.get("tfracs", [1.0, 0.9, 0.8, 0.7, 0.6]), mode=tcfg.get("mode", "any"),
         minRatio=11.0, maxRatio=30.0, gapC=0.26, gapH=0.5, gapB=1.0, lhMax=1.22, maxJust=1.6,
-    )
+    )  # fmt: skip
 
 
-def build_poster_html(data, trim, bleed, tcfg, fit=None):
+def build_poster_html(data, trim, bleed, tcfg, fit=None) -> str:
+    """The complete poster page (HTML + CSS + JS) for a trim size and bleed."""
     tw, th = trim
     pw, ph = tw + 2 * bleed, th + 2 * bleed
     m = tcfg["margin"]
     d = dict(data)
     if fit:
         d["fit"] = fit
-    page = (PAGE.replace("__FONTS__", font_faces()).replace("__PW__", str(pw)).replace("__PH__", str(ph))
-            .replace("__OX__", str(bleed + m)).replace("__OY__", str(bleed + m))
-            .replace("__CW__", str(tw - 2 * m)).replace("__CH__", str(th - 2 * m))
-            .replace("__RULE__", str(tcfg["rule"])).replace("__CW8__", str(tcfg["clue_weight"]))
-            .replace("__DATA__", _js_json(d)))
-    return page
+    return (
+        PAGE.replace("__FONTS__", font_faces()).replace("__PW__", str(pw)).replace("__PH__", str(ph))
+        .replace("__OX__", str(bleed + m)).replace("__OY__", str(bleed + m))
+        .replace("__CW__", str(tw - 2 * m)).replace("__CH__", str(th - 2 * m))
+        .replace("__RULE__", str(tcfg["rule"])).replace("__CW8__", str(tcfg["clue_weight"]))
+        .replace("__DATA__", _js_json(d))
+    )  # fmt: skip
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(prog="crossword_poster render", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("grid", help="grid JSON with a top-level 'clues' array (from `build` / `generate` + `attach_pool`)")
-    ap.add_argument("--trim", default="24x36", help="trim size WxH in inches (default 24x36; tuned: 18x24, 24x36, 36x48)")
-    ap.add_argument("--outroot", default=".")
-    ap.add_argument("--make", default="A,B,C,key", help="comma list: A (A_black), B (B_spot: black + white icons), C (C_grey), key (grey 11x17 key)")
-    ap.add_argument("--block-fill", default=os.environ.get("BLOCK_FILL") or None, metavar="COLOR",
-                    help="CSS colour for the non-letter squares in EVERY variant (A, B, C, key, solution). "
-                         "Default: A/B black, C/key/solution --grey-fill. Env BLOCK_FILL is also honoured.")
-    ap.add_argument("--grey-fill", default="#a3a3a3", help="non-letter squares in C_grey, the key and the solution when --block-fill is not given (a deliberate tint, 36%% black)")
-    ap.add_argument("--title", default=DEFAULT_TITLE, help="poster title (default: %(default)r)")
-    ap.add_argument("--byline", "--subtitle", dest="byline", default=DEFAULT_BYLINE, help="line to the right of the title (default: %(default)r)")
-    ap.add_argument("--spot-text", default="", help="short text (e.g. a number) reversed out of the widest black void in variant B; default none")
-    ap.add_argument("--quiet", action="store_true", help="print only the one-line fit summary")
-    ap.add_argument("--solution", action="store_true", help="write OUTROOT/solution_letter.pdf/.png (no poster)")
-    ap.add_argument("--mode", default="any", choices=["any", "full"], help="'full' forbids the wrap layout")
-    ap.add_argument("--png-width", type=int, default=1200)
-    ap.add_argument("--build-dir", default=None, help="scratch HTML directory (default OUTROOT/.build)")
-    a = ap.parse_args(argv)
-    a.build_dir = a.build_dir or os.path.join(a.outroot, ".build")
-    fill_dark = a.block_fill or "#000000"
-    fill_grey = a.block_fill or a.grey_fill
+@dataclass
+class RenderOptions:
+    """Text and colour settings shared by every output of one render."""
 
-    from playwright.sync_api import sync_playwright
-    gj = json.load(open(a.grid))
-    an = analyse(gj)
-    os.makedirs(a.build_dir, exist_ok=True)
+    title: str = DEFAULT_TITLE
+    byline: str = DEFAULT_BYLINE
+    block_fill: Optional[str] = None
+    grey_fill: str = "#a3a3a3"
+    spot_text: str = ""
+    mode: str = "any"
+    png_width: int = 1200
+    build_dir: Optional[str] = None
+    quiet: bool = False
+
+    @property
+    def fill_dark(self) -> str:
+        """Block colour of the black and icon styles."""
+        return self.block_fill or "#000000"
+
+    @property
+    def fill_grey(self) -> str:
+        """Block colour of the grey style, the key and the solution."""
+        return self.block_fill or self.grey_fill
+
+
+def load_grid(path: str) -> dict:
+    """Read a grid.json (with clues) and analyse it."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            gj = json.load(fh)
+    except FileNotFoundError:
+        raise UserError(f"{path} not found.", "run `crossword-poster build` or `generate` first") from None
+    except json.JSONDecodeError as exc:
+        raise UserError(f"{path} is not a valid grid file ({exc}).") from exc
+    if "clues" not in gj:
+        raise UserError(f"{path} has no clues.", "use the grid.json written by `build` (it includes the clues)")
+    return analyse(gj)
+
+
+def _write_html(directory: str, name: str, html: str) -> str:
+    os.makedirs(directory, exist_ok=True)
+    path = os.path.join(directory, name)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    return Path(path).resolve().as_uri()
+
+
+def render_solution(ctx, an: dict, outroot: str, opts: RenderOptions) -> dict:
+    """Write OUTROOT/solution_letter.pdf and .png: the filled grid on one letter page."""
+    tcfg = size_config("18x24")
+    margin = 0.4
+    best = None
+    for w, h in ((8.5, 11.0), (11.0, 8.5)):  # portrait or landscape, whichever gives bigger squares
+        cell = min((w - 2 * margin) / an["cols"], (h - 2 * margin - 0.9) / an["rows"])
+        if best is None or cell > best[0]:
+            best = (cell, w, h)
+    _, pwid, phei = best
+    data = build_data(
+        an,
+        tcfg,
+        pwid - 2 * margin,
+        phei - 2 * margin,
+        key=True,
+        fill=opts.fill_grey,
+        title=opts.title,
+        byline=opts.byline,
+    )
+    data.update(title=opts.title + ": The Solution", sw=0.6, outer=2.0, numRatio=0.3)
+    html = (
+        SOLUTION_PAGE.replace("__FONTS__", font_faces()).replace("__PW__", str(pwid)).replace("__PH__", str(phei))
+        .replace("__M__", str(margin)).replace("__CW__", str(pwid - 2 * margin)).replace("__DATA__", _js_json(data))
+    )  # fmt: skip
+    url = _write_html(opts.build_dir, "solution_letter.html", html)
+    pg = ctx.new_page()
+    pg.goto(url)
+    pg.wait_for_function("window.__done===true")
+    info = pg.evaluate("window.__info")
+    out = os.path.join(outroot, "solution_letter.pdf")
+    os.makedirs(outroot, exist_ok=True)
+    run_pdf(pg, pwid, phei, out)
+    pg.close()
+    png_preview(out, out[:-4] + ".png", opts.png_width)
+    return dict(info, page=f"{pwid}x{phei}")
+
+
+def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderOptions, log=print) -> dict:
+    """Fit and render one trim size into OUTROOT/<trim>/. Returns the fit report (also written to fit.json)."""
+    tw, th = parse_size(trim)
+    tcfg = dict(size_config(trim), mode=opts.mode)
+    cw, ch = tw - 2 * tcfg["margin"], th - 2 * tcfg["margin"]
+    outdir = os.path.join(outroot, trim.lower())
+    os.makedirs(outdir, exist_ok=True)
+    icons = pick_icons(an, spot_text=opts.spot_text)
     report = dict(grid=f"{an['cols']}x{an['rows']}", entries=len(an["entries"]))
 
-    with sync_playwright() as pw:
-        br = launch(pw)
-        ctx = br.new_context()
+    def load(key, spot, bleed, tag, fill=None, sw=None):
+        data = build_data(
+            an,
+            tcfg,
+            cw,
+            ch,
+            key=key,
+            icons=icons if spot else None,
+            fill=fill or opts.fill_dark,
+            title=opts.title,
+            byline=opts.byline,
+        )
+        if sw:
+            data["sw"] = sw
+        url = _write_html(opts.build_dir, f"{trim}_{tag}.html", build_poster_html(data, (tw, th), bleed, tcfg))
+        pg = ctx.new_page()
+        pg.goto(url)
+        pg.wait_for_function("window.__ready===true")
+        return pg
 
-        if a.solution:
-            tcfg = size_config("18x24")
-            pwid, phei, M = 11.0, 8.5, 0.4
-            best = None
-            for (w, h) in ((8.5, 11.0), (11.0, 8.5)):
-                cell = min((w - 2 * M) / an["cols"], (h - 2 * M - 0.9) / an["rows"])
-                if best is None or cell > best[0]:
-                    best = (cell, w, h)
-            _, pwid, phei = best
-            data = build_data(an, tcfg, pwid - 2 * M, phei - 2 * M, key=True, fill=fill_grey, title=a.title, byline=a.byline)
-            data.update(title=a.title + ": The Solution", sw=0.6, outer=2.0, numRatio=0.3)
-            htm = (SOLUTION_PAGE.replace("__FONTS__", font_faces()).replace("__PW__", str(pwid)).replace("__PH__", str(phei))
-                   .replace("__M__", str(M)).replace("__CW__", str(pwid - 2 * M)).replace("__DATA__", _js_json(data)))
-            hp = os.path.join(a.build_dir, "solution_letter.html")
-            open(hp, "w", encoding="utf-8").write(htm)
-            pg = ctx.new_page()
-            pg.goto(Path(hp).resolve().as_uri())
-            pg.wait_for_function("window.__done===true")
-            info = pg.evaluate("window.__info")
-            out = os.path.join(a.outroot, "solution_letter.pdf")
-            os.makedirs(a.outroot, exist_ok=True)
-            run_pdf(pg, pwid, phei, out)
-            png_preview(out, out[:-4] + ".png", a.png_width)
-            report["solution"] = dict(info, page=f"{pwid}x{phei}")
-            print(json.dumps(report, indent=1) if not a.quiet else f"solution: {out}")
-            br.close()
-            return 0
+    # 1. fit once (plain, no bleed: the layout is independent of the bleed)
+    pg = load(False, False, 0.0, "fit")
+    fit = pg.evaluate("fitAll()")
+    pg.close()
+    if not fit.get("ok"):
+        raise UserError(
+            f"The clues do not fit on a {trim} poster at a readable size.",
+            "use a bigger --size (for example 36x48), or fewer / shorter clues",
+        )
+    report["fit_candidates"] = fit.pop("log")[:60]
+    report["fit"] = fit
+    log(f"  {trim}: squares {fit['cell']:.3f} in, clue text {fit['fs']:.1f} pt")
 
-        tw, th = parse_size(a.trim)
-        tcfg = dict(size_config(a.trim), mode=a.mode)
-        cw, ch = tw - 2 * tcfg["margin"], th - 2 * tcfg["margin"]
-        outdir = os.path.join(a.outroot, a.trim.lower())
-        os.makedirs(outdir, exist_ok=True)
-        icons = pick_icons(an, spot_text=a.spot_text)
-        make = {m.strip() for m in a.make.split(",")}
+    def render(tag, key, spot, bleed, fill=None, sw=None):
+        pg = load(key, spot, bleed, tag, fill, sw)
+        pg.evaluate("f=>{window.__plan=applyPlan(f);}", fit)
+        ver = pg.evaluate("f=>verify(f)", fit)
+        slack = pg.evaluate("window.__plan.slackInfo")
+        return pg, ver, slack
 
-        def load(key, spot, bleed, fit=None, tag="x", fill=None, sw=None):
-            data = build_data(an, tcfg, cw, ch, key=key, icons=icons if spot else None, fill=fill or fill_dark, title=a.title, byline=a.byline)
-            if sw:
-                data["sw"] = sw
-            hp = os.path.join(a.build_dir, f"{a.trim}_{tag}.html")
-            open(hp, "w", encoding="utf-8").write(build_poster_html(data, (tw, th), bleed, tcfg))
-            pg = ctx.new_page()
-            pg.goto(Path(hp).resolve().as_uri())
-            pg.wait_for_function("window.__ready===true")
-            return pg
-
-        # 1. fit once (plain, no bleed: layout is bleed independent)
-        pg = load(False, False, 0.0, tag="fit")
-        fit = pg.evaluate("fitAll()")
+    vers = {}
+    for variant, spot, folder, fill in (
+        ("A", False, "A_black", opts.fill_dark),
+        ("B", True, "B_spot", opts.fill_dark),
+        ("C", False, "C_grey", opts.fill_grey),
+    ):
+        if variant not in make:
+            continue
+        sub = os.path.join(outdir, folder)
+        os.makedirs(sub, exist_ok=True)
+        pg, ver, slack = render(f"{variant}_bleed", False, spot, BLEED, fill)
+        run_pdf(pg, tw + 2 * BLEED, th + 2 * BLEED, os.path.join(sub, "poster.pdf"))
         pg.close()
-        if not fit.get("ok"):
-            print("FIT FAILED", json.dumps(fit)[:2000])
-            br.close()
-            return 3
-        fit_log = fit.pop("log")
-        report["fit"] = fit
-        report["fit_candidates"] = fit_log[:60]
-        print("fit:", json.dumps(fit))
-
-        def render(tag, key, spot, bleed, out_pdf, fill=None, sw=None):
-            pg = load(key, spot, bleed, tag=tag, fill=fill, sw=sw)
-            pg.evaluate("f=>{window.__plan=applyPlan(f);}", fit)
-            ver = pg.evaluate("f=>verify(f)", fit)
-            slack = pg.evaluate("window.__plan.slackInfo")
-            return pg, ver, slack
-
-        vers = {}
-        for variant, spot, folder, fill in (("A", False, "A_black", fill_dark), ("B", True, "B_spot", fill_dark), ("C", False, "C_grey", fill_grey)):
-            if variant not in make:
-                continue
-            sub = os.path.join(outdir, folder)
-            os.makedirs(sub, exist_ok=True)
-            pg, ver, slack = render(f"{variant}_bleed", False, spot, BLEED, None, fill)
-            run_pdf(pg, tw + 2 * BLEED, th + 2 * BLEED, os.path.join(sub, "poster.pdf"))
-            pg.close()
-            png_preview(os.path.join(sub, "poster.pdf"), os.path.join(sub, "poster.png"), a.png_width)
-            pg, ver2, slack = render(f"{variant}_trim", False, spot, 0.0, None, fill)
-            run_pdf(pg, tw, th, os.path.join(sub, "poster_trim.pdf"))
-            pg.close()
-            vers[variant] = ver
-            report.setdefault("slack", slack)
-        if "key" in make:
-            # scale the finished poster onto 11x17 (0.25 in unprintable margin); keep cell lines >= 0.55 pt after scaling
-            sc = min((11 - 0.5) / tw, (17 - 0.5) / th)
-            pg, ver, _ = render("key", True, False, 0.0, None, fill_grey, sw=max(tcfg["sw"], 0.55 / sc))
-            pg.evaluate("""([s,tw,th])=>{const e=document.getElementById('sheet');
+        png_preview(os.path.join(sub, "poster.pdf"), os.path.join(sub, "poster.png"), opts.png_width)
+        pg, _, _ = render(f"{variant}_trim", False, spot, 0.0, fill)
+        run_pdf(pg, tw, th, os.path.join(sub, "poster_trim.pdf"))
+        pg.close()
+        vers[variant] = ver
+        report.setdefault("slack", slack)
+    if "key" in make:
+        # scale the finished poster onto 11x17 (0.25 in unprintable margin); keep cell lines >= 0.55 pt after scaling
+        sc = min((11 - 0.5) / tw, (17 - 0.5) / th)
+        pg, _, _ = render("key", True, False, 0.0, opts.fill_grey, sw=max(tcfg["sw"], 0.55 / sc))
+        pg.evaluate(
+            """([s,tw,th])=>{const e=document.getElementById('sheet');
               e.style.transform='scale('+s+')';e.style.left=((11*96-tw*96*s)/2)+'px';e.style.top=((17*96-th*96*s)/2)+'px';
-              document.getElementById('page').style.width='11in';document.getElementById('page').style.height='17in';}""", [sc, tw, th])
-            pg.add_style_tag(content="@page{size:11in 17in;margin:0}html,body{width:11in!important;height:17in!important}")
-            run_pdf(pg, 11, 17, os.path.join(outdir, "key.pdf"))
-            pg.close()
-        report["verify"] = vers
-        json.dump(report, open(os.path.join(outdir, "fit.json"), "w"), indent=1)
-        if not a.quiet:
-            print(json.dumps(dict(fit=fit, verify=vers), indent=1))
-        br.close()
+              document.getElementById('page').style.width='11in';document.getElementById('page').style.height='17in';}""",
+            [sc, tw, th],
+        )
+        pg.add_style_tag(content="@page{size:11in 17in;margin:0}html,body{width:11in!important;height:17in!important}")
+        run_pdf(pg, 11, 17, os.path.join(outdir, "key.pdf"))
+        pg.close()
+    report["verify"] = vers
+    with open(os.path.join(outdir, "fit.json"), "w", encoding="utf-8") as fh:
+        json.dump(report, fh, indent=1)
+    return report
+
+
+def main(argv: Optional[list] = None) -> int:
+    """Command line entry point for ``render``."""
+    ap = argparse.ArgumentParser(
+        prog="crossword-poster render", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument("grid", help="grid JSON with a top-level 'clues' array (the grid.json written by `build`)")
+    ap.add_argument(
+        "--trim", default="24x36", help="trim size WxH in inches (default 24x36; tuned: 18x24, 24x36, 36x48)"
+    )
+    ap.add_argument("--outroot", default=".", help="folder to write into (default: current folder)")
+    ap.add_argument(
+        "--make",
+        default="A,B,C,key",
+        help="comma list: A (A_black), B (B_spot: black + white icons), C (C_grey), key (grey 11x17 key)",
+    )
+    ap.add_argument("--block-fill", default=os.environ.get("BLOCK_FILL") or None, metavar="COLOR",
+                    help="CSS colour for the non-letter squares in EVERY variant. Default: A/B black, C/key/solution --grey-fill")  # fmt: skip
+    ap.add_argument(
+        "--grey-fill",
+        default="#a3a3a3",
+        help="colour of the grey style, the key and the solution (default %(default)s)",
+    )
+    ap.add_argument("--title", default=DEFAULT_TITLE, help="poster title (default: %(default)r)")
+    ap.add_argument(
+        "--byline",
+        "--subtitle",
+        dest="byline",
+        default=DEFAULT_BYLINE,
+        help="line to the right of the title (default: %(default)r)",
+    )
+    ap.add_argument(
+        "--spot-text", default="", help="short text (e.g. a number) reversed out of the widest black void in variant B"
+    )
+    ap.add_argument("--quiet", action="store_true", help="print less")
+    ap.add_argument(
+        "--solution", action="store_true", help="write OUTROOT/solution_letter.pdf/.png instead of a poster"
+    )
+    ap.add_argument(
+        "--mode",
+        default="any",
+        choices=["any", "full"],
+        help="'full' forbids the wrap layout (clues only beneath the grid)",
+    )
+    ap.add_argument("--png-width", type=int, default=1200, help="preview width in pixels (default %(default)s)")
+    ap.add_argument("--build-dir", default=None, help="scratch HTML directory (default OUTROOT/.build)")
+    a = ap.parse_args(argv)
+    opts = RenderOptions(a.title, a.byline, a.block_fill, a.grey_fill, a.spot_text, a.mode, a.png_width,
+                         a.build_dir or os.path.join(a.outroot, ".build"), a.quiet)  # fmt: skip
+    an = load_grid(a.grid)
+    with browser_context() as ctx:
+        if a.solution:
+            info = render_solution(ctx, an, a.outroot, opts)
+            print(f"wrote {os.path.join(a.outroot, 'solution_letter.pdf')} (squares {info['cell']:.3f} in)")
+            return 0
+        make = {m.strip() for m in a.make.split(",") if m.strip()}
+        unknown = make - {"A", "B", "C", "key"}
+        if unknown:
+            raise UserError(f"Unknown --make value(s): {', '.join(sorted(unknown))}.", "choose from A, B, C, key")
+        render_size(ctx, an, a.trim, a.outroot, make, opts)
+    print(f"wrote {os.path.join(a.outroot, a.trim.lower())}")
     return 0
 
 

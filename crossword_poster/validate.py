@@ -1,34 +1,45 @@
-#!/usr/bin/env python3
-"""Independent grid validator (does not import generate.py).
+"""Independent grid validator (it does not import the generator).
 
-Checks a grid.json (as written by `generate`/`build`):
-  * bounding box within --max-rows/--max-cols (optional) and tight
+Checks a grid.json (as written by `build`):
+  * the bounding box is within --max-rows/--max-cols (optional) and tight
   * every across/down run of 2+ letters is a listed placement, and vice versa; letters match; no duplicate starts
   * numbering follows reading order; every placement has exactly one non-empty clue whose answer matches
-  * no orphan letters (every letter is in a word), the letter graph is connected, no duplicate answers
-  * with --pool: every pool entry (by id) appears in the grid, i.e. ALL answers are required
-  * enumerations such as "(3,3)" match the answer length, and appear at most once per clue
+  * no orphan letters (every letter is in a word), the letters form one connected shape, no duplicate answers
+  * with --pool: every pool entry (by id) appears in the grid
+  * a trailing enumeration such as "(3,3)" in a clue matches the answer length
 
 Usage:
-  python -m crossword_poster validate out/grid.json [MAXROWS MAXCOLS] [--pool out/pool.csv]
+  crossword-poster validate out/details/grid.json [MAXROWS MAXCOLS] [--pool out/details/pool.csv]
 Exit status 0 = valid, 1 = errors.
 """
+
+from __future__ import annotations
+
 import argparse
-import csv
 import json
 import os
-import re
 import sys
+from typing import Optional
+
+from .errors import UserError
+from .pool import enumeration_total, read_pool
 
 
-def validate(grid_path, max_rows=None, max_cols=None, pool=None):
-    """Return (errors, info). errors is a list (empty when valid)."""
-    with open(grid_path, encoding="utf-8") as f:
-        d = json.load(f)
+def validate(
+    grid_path: str, max_rows: Optional[int] = None, max_cols: Optional[int] = None, pool: Optional[list] = None
+) -> tuple:
+    """Check a grid.json. Returns ``(errors, info)``; ``errors`` is an empty list when the grid is valid."""
+    try:
+        with open(grid_path, encoding="utf-8") as f:
+            d = json.load(f)
+    except FileNotFoundError:
+        raise UserError(f"{grid_path} not found.") from None
+    except json.JSONDecodeError as exc:
+        raise UserError(f"{grid_path} is not a valid grid file ({exc}).") from exc
     g = d["grid"]
     R, C = len(g), len(g[0])
     errs, info = [], []
-    if (max_rows and R > max_rows) or (max_cols and C > max_cols):
+    if (max_rows and max_rows < R) or (max_cols and max_cols < C):
         errs.append(("bound exceeded", R, C))
 
     def cell(r, c):
@@ -69,8 +80,13 @@ def validate(grid_path, max_rows=None, max_cols=None, pool=None):
             if cell(rr, cc) != ch:
                 errs.append(("letter mismatch", p["word"], rr, cc))
     if runs != listed:
-        errs.append(("runs != listed", {k: v for k, v in runs.items() if listed.get(k) != v},
-                     {k: v for k, v in listed.items() if runs.get(k) != v}))
+        errs.append(
+            (
+                "runs != listed",
+                {k: v for k, v in runs.items() if listed.get(k) != v},
+                {k: v for k, v in listed.items() if runs.get(k) != v},
+            )
+        )
 
     num, n = {}, 1
     for r in range(R):
@@ -133,32 +149,30 @@ def validate(grid_path, max_rows=None, max_cols=None, pool=None):
         info.append(f"pool entries required: {len(must)}")
 
     for c_ in cl:
-        t = c_["clue"]
-        ens = re.findall(r"\((\d+(?:,\d+)*)\)", t)
-        if len(ens) > 1:
-            errs.append(("double enumeration", c_["number"], t))
-        if ens and sum(int(x) for x in ens[-1].split(",")) != len(c_["answer"]):
-            errs.append(("enumeration != length", c_["number"], t, len(c_["answer"])))
+        claimed = enumeration_total(c_["clue"])
+        if claimed is not None and claimed != len(c_["answer"]):
+            errs.append(("enumeration != length", c_["number"], c_["clue"], len(c_["answer"])))
 
-    info.insert(0, f"{grid_path}: words {len(ws)} across {sum(1 for k in runs if k[2] == 'across')} "
-                   f"down {sum(1 for k in runs if k[2] == 'down')} letters {len(letters)} bbox {R} x {C}")
+    info.insert(
+        0,
+        f"{grid_path}: words {len(ws)} across {sum(1 for k in runs if k[2] == 'across')} "
+        f"down {sum(1 for k in runs if k[2] == 'down')} letters {len(letters)} bbox {R} x {C}",
+    )
     return errs, info
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(prog="crossword_poster validate", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("target", help="grid.json, or a directory containing grid.json")
+def main(argv: Optional[list] = None) -> int:
+    """Command line entry point for ``validate``."""
+    ap = argparse.ArgumentParser(
+        prog="crossword-poster validate", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument("target", help="grid.json, or a folder containing grid.json")
     ap.add_argument("max_rows", nargs="?", type=int, default=None)
     ap.add_argument("max_cols", nargs="?", type=int, default=None)
     ap.add_argument("--pool", default=None, help="pool CSV from `pool`: every entry must be in the grid")
     a = ap.parse_args(argv)
     path = os.path.join(a.target, "grid.json") if os.path.isdir(a.target) else a.target
-    pool = None
-    if a.pool:
-        with open(a.pool, newline="", encoding="utf-8") as f:
-            pool = list(csv.DictReader(f))
-    errs, info = validate(path, a.max_rows, a.max_cols, pool)
+    errs, info = validate(path, a.max_rows, a.max_cols, read_pool(a.pool) if a.pool else None)
     for line in info:
         print(line)
     print("ERRORS:", errs if errs else "none")
