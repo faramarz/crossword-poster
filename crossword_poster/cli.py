@@ -320,12 +320,47 @@ def _dispatch(argv: list) -> int:
     return commands[cmd](rest)
 
 
+def _is_closed_pipe(exc: OSError) -> bool:
+    """A write to a reader that has gone away: BrokenPipeError everywhere, OSError(EINVAL) on Windows."""
+    return isinstance(exc, BrokenPipeError) or exc.errno in (errno.EPIPE, errno.EINVAL)
+
+
+class _PipeSafeStdout:
+    """Wraps stdout so a closed pipe always surfaces as BrokenPipeError, which main() turns into a quiet exit.
+
+    Windows reports a reader that has gone away as OSError(EINVAL) from print(), not BrokenPipeError; translating it
+    here, at the stream, keeps that apart from unrelated EINVAL errors (a bad file path, say) raised elsewhere.
+    """
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, text):
+        try:
+            return self._stream.write(text)
+        except OSError as exc:
+            if _is_closed_pipe(exc):
+                raise BrokenPipeError(errno.EPIPE, "Broken pipe") from exc
+            raise
+
+    def flush(self):
+        try:
+            return self._stream.flush()
+        except OSError as exc:
+            if _is_closed_pipe(exc):
+                raise BrokenPipeError(errno.EPIPE, "Broken pipe") from exc
+            raise
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
 def _flush_stdout() -> None:
     """Flush stdout now. A reader that has gone away raises BrokenPipeError (Windows may say EINVAL instead)."""
     try:
         sys.stdout.flush()
     except OSError as exc:
-        if isinstance(exc, BrokenPipeError) or exc.errno in (errno.EPIPE, errno.EINVAL):
+        if _is_closed_pipe(exc):
             raise BrokenPipeError(errno.EPIPE, "Broken pipe") from exc
         raise
     except (ValueError, AttributeError):  # stdout is closed or missing: nothing to flush
@@ -338,6 +373,17 @@ def main(argv: Optional[list] = None) -> int:
     for stream in (sys.stdout, sys.stderr):  # never crash on a console that cannot show a character
         with contextlib.suppress(AttributeError, ValueError):
             stream.reconfigure(errors="replace")
+    original_stdout = sys.stdout
+    if original_stdout is not None:
+        sys.stdout = _PipeSafeStdout(original_stdout)
+    try:
+        return _main(argv)
+    finally:
+        if isinstance(sys.stdout, _PipeSafeStdout):
+            sys.stdout = original_stdout
+
+
+def _main(argv: list) -> int:
     try:
         try:
             code = _dispatch(argv)

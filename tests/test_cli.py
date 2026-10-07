@@ -1,6 +1,8 @@
 """Command line behaviour: help, version, friendly errors (never a traceback), template, doctor."""
 
 import csv
+import errno
+import io
 import sys
 
 import pytest
@@ -351,3 +353,32 @@ def test_giveaways_are_listed_by_row_in_the_build_output():
     text = "\n".join(lines)
     assert 'row 7: "Delhi (7,2,5)" contains the answer DELHI' in text
     assert 'row 9: "Dog dog" contains its own answer' in text
+
+
+@pytest.mark.parametrize("err", [errno.EINVAL, errno.EPIPE])
+def test_windows_style_closed_pipe_on_print_exits_quietly(monkeypatch, capsys, err):
+    """Windows reports a reader that has gone away as OSError(EINVAL) from the print itself, not BrokenPipeError."""
+
+    class GoneReader(io.StringIO):
+        def write(self, text):
+            raise OSError(err, "Invalid argument")
+
+        def fileno(self):
+            raise io.UnsupportedOperation("no fd")  # main() then skips redirecting to the null device
+
+    original = GoneReader()
+    monkeypatch.setattr(sys, "stdout", original)
+    assert cli.main(["--version"]) == 0
+    assert sys.stdout is original  # the wrapper is removed again
+    assert capsys.readouterr().err == ""
+
+
+def test_unrelated_einval_is_still_reported(monkeypatch, capsys):
+    """Only stdout writes are treated as a closed pipe; an EINVAL raised by the command itself is a real error."""
+
+    def boom(argv):
+        raise OSError(errno.EINVAL, "Invalid argument")
+
+    monkeypatch.setattr(cli, "_dispatch", boom)
+    assert cli.main(["build"]) == 70
+    assert "Invalid argument" in capsys.readouterr().err
