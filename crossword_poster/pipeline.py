@@ -244,10 +244,14 @@ def _brief_pool_report(rep: dict, log: Log) -> None:
             log(f"  skipped row {s['row']} ({s['answer']!r}): {s['reason']}")
     for w in rep["warnings"]:
         log(f"  warning: {w}")
-    if rep["giveaways"]:
-        log(
-            f"  {len(rep['giveaways'])} clue(s) may contain an answer (see details/pool_report.json): check that they are not giveaways"
-        )
+    gv = rep["giveaways"]
+    if gv:
+        log(f"  {len(gv)} clue(s) may contain an answer. Check that they are not giveaways:")
+        for g in gv[:10]:
+            which = "its own answer" if g["itself"] else f"the answer {g['contains']}"
+            log(f'    row {g["row"]}: "{g["clue"]}" contains {which}')
+        if len(gv) > 10:
+            log(f"    ... and {len(gv) - 10} more (all of them are in details/pool_report.json)")
 
 
 def _copy(src: str, dst: str) -> bool:

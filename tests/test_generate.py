@@ -147,3 +147,20 @@ def test_long_searches_log_progress(monkeypatch):
     lines = []
     gen.generate_all(WORDS, attempts=100, seed=1, log=lines.append)
     assert any("still searching" in ln for ln in lines)
+
+
+def test_clues_csv_shows_the_same_clue_text_as_the_poster_including_single_word_lengths(small_grid, tmp_path):
+    import csv
+
+    _, res = small_grid
+    gen.write_grid_files(res, str(tmp_path))
+    with open(tmp_path / "clues.csv", newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert rows
+    for row in rows:
+        answer = next(
+            c["answer"]
+            for c in res["clues"]
+            if str(c["number"]) == row["number"] and c["direction"] == row["direction"]
+        )
+        assert row["clue"].endswith(f"({len(answer)})"), row

@@ -755,6 +755,15 @@ def size_warnings(trim: str, fit: dict) -> list[str]:
     return out
 
 
+def no_fit_error(trim: str) -> UserError:
+    """The error for clues that cannot be fitted at a readable size; the hint depends on how big the poster already is."""
+    if parse_size(trim)[0] >= 36:
+        hint = "use fewer or shorter clues (about 150 is the most a 36x48 poster holds)"
+    else:
+        hint = "use a bigger --size (for example 36x48), or fewer / shorter clues"
+    return UserError(f"The clues do not fit on a {trim} poster at a readable size.", hint)
+
+
 def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderOptions, log=print) -> dict:
     """Fit and render one trim size into OUTROOT/<trim>/. Returns the fit report (also written to fit.json)."""
     tw, th = parse_size(trim)
@@ -790,10 +799,7 @@ def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderO
     fit = pg.evaluate("fitAll()")
     pg.close()
     if not fit.get("ok"):
-        raise UserError(
-            f"The clues do not fit on a {trim} poster at a readable size.",
-            "use a bigger --size (for example 36x48), or fewer / shorter clues",
-        )
+        raise no_fit_error(trim)
     report["fit_candidates"] = fit.pop("log")[:60]
     report["fit"] = fit
     report["warnings"] = size_warnings(trim, fit)

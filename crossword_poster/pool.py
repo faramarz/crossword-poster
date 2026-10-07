@@ -44,6 +44,7 @@ SPARSE_BELOW = 8
 CROWDED_ABOVE = 120
 MAX_WORDS = 400
 MAX_CLUE_LEN = 300
+MAX_ROW_WARNINGS = 10
 
 # letters that Unicode decomposition does not turn into A-Z
 _SPECIAL = str.maketrans(
@@ -226,6 +227,7 @@ def build_pool(
     seen: dict[str, int] = {}
     used_ids: set[str] = set()
     pairs: list[tuple[str, str]] = []
+    odd_rows: list[tuple[int, str, str]] = []
     blank = 0
     for n, row in enumerate(table[1:], start=2):  # n = the row number a spreadsheet shows
         if not any(c.strip() for c in row):
@@ -233,6 +235,8 @@ def build_pool(
             continue
         clue, display = cell(row, ci), cell(row, ai)
         pairs.append((clue, display))
+        if row_looks_swapped(clue, display):
+            odd_rows.append((n, clue, display))
         gw = grid_word(cell(row, gi) or display)
         rid = cell(row, ii) or f"row{n}"
         why = _reject_reason(clue, display, gw, min_len, max_len)
@@ -272,6 +276,14 @@ def build_pool(
         )
     if swap:
         warnings.append(swap)
+    else:
+        for n, clue, display in odd_rows[:MAX_ROW_WARNINGS]:
+            warnings.append(
+                f"Row {n}: the clue is just '{clue}' but the answer is '{display}', which reads like a clue. "
+                "If this row is the wrong way round, swap the two cells."
+            )
+        if len(odd_rows) > MAX_ROW_WARNINGS:
+            warnings.append(f"... and {len(odd_rows) - MAX_ROW_WARNINGS} more rows that look swapped.")
     if len(rows) < SPARSE_BELOW:
         warnings.append(f"Only {len(rows)} clues: the poster will look sparse. About 30 to 60 clues works best.")
     if len(rows) > CROWDED_ABOVE:
@@ -286,13 +298,23 @@ def build_pool(
     return rows, report
 
 
+def _wordish(text: str) -> list[str]:
+    """The words of ``text`` that are real words (two letters or more), so 'p a r i s' does not count as five."""
+    return [t for t in text.split() if len(grid_word(t)) >= 2]
+
+
 def looks_swapped(pairs: list[tuple[str, str]]) -> bool:
-    """True when most rows have a wordy 'answer' (4+ words) and a clue with fewer words: the columns are swapped."""
+    """True when most rows have a wordy 'answer' (3+ words) and a clue with fewer words: the columns are swapped."""
     pairs = [(c, a) for c, a in pairs if c and a]
     if len(pairs) < 2:
         return False
-    wordy = sum(1 for c, a in pairs if len(a.split()) >= 4 and len(a.split()) > len(c.split()))
+    wordy = sum(1 for c, a in pairs if len(_wordish(a)) >= 3 and len(_wordish(a)) > len(c.split()))
     return wordy * 2 >= len(pairs)
+
+
+def row_looks_swapped(clue: str, answer: str) -> bool:
+    """One row whose 'answer' reads like a clue (3+ words) while its 'clue' is a single word: probably swapped."""
+    return len(_wordish(answer)) >= 3 and len(clue.split()) == 1
 
 
 def _reject_reason(clue: str, display: str, gw: str, min_len: int, max_len: int) -> Optional[str]:
@@ -353,7 +375,7 @@ def giveaways(rows: list[dict]) -> list[dict]:
             else:
                 hit = o["grid"] in words
             if hit:
-                out.append(dict(id=r["id"], clue=r["clue"], contains=o["grid"], itself=o is r))
+                out.append(dict(id=r["id"], row=r.get("row"), clue=r["clue"], contains=o["grid"], itself=o is r))
     return out
 
 

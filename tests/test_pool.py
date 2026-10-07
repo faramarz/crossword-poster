@@ -417,3 +417,24 @@ def test_header_listing_in_errors_is_clipped(tmp_path):
     assert len(msg) < 700
     assert "... and 30 more" in msg
     assert "x" * 60 not in msg
+
+
+def test_a_single_swapped_row_is_pointed_out_by_row_number(tmp_path):
+    rows = [("Capital of France", "Paris"), ("Delhi", "Capital of India"), ("Eternal city", "Rome")]
+    _, rep = build(write_csv(tmp_path / "x.csv", rows))
+    row_warnings = [w for w in rep["warnings"] if w.startswith("Row 3:")]
+    assert len(row_warnings) == 1
+    assert "'Delhi'" in row_warnings[0] and "'Capital of India'" in row_warnings[0]
+    assert "swap the two cells" in row_warnings[0]
+
+
+def test_letters_spaced_out_are_not_taken_for_a_sentence(tmp_path):
+    rows = [("Capital of France", "p a r i s"), ("Eternal city", "Rome")]
+    _, rep = build(write_csv(tmp_path / "x.csv", rows))
+    assert not [w for w in rep["warnings"] if "swap" in w]
+
+
+def test_giveaways_carry_the_row_number(tmp_path):
+    rows = [("Capital of France", "Paris"), ("Paris is in this country", "France")]
+    _, rep = build(write_csv(tmp_path / "x.csv", rows))
+    assert [g["row"] for g in rep["giveaways"]] == [2, 3]  # both clues name the other row's answer

@@ -207,22 +207,85 @@ def test_install_command_text_quotes_a_path_with_spaces(monkeypatch):
     assert common.install_command_text() == r'"C:\Program Files\Python 3\python.exe" -m playwright install chromium'
 
 
-def test_install_browser_runs_the_command_with_this_python(capsys, monkeypatch):
+class FakeStream:
+    def __init__(self, lines):
+        self.lines = lines
+
+    def __iter__(self):
+        return iter(self.lines)
+
+    def close(self):
+        pass
+
+
+class FakeProcess:
+    """Stands in for subprocess.Popen: yields the given output lines and exits with ``code``."""
+
+    def __init__(self, lines, code):
+        self.stdout = FakeStream(lines)
+        self.code = code
+
+    def wait(self):
+        return self.code
+
+
+def fake_popen(monkeypatch, lines=(), code=0):
     calls = []
-    monkeypatch.setattr(cli.subprocess, "call", lambda cmd: calls.append(cmd) or 0)
+
+    def popen(cmd, **kwargs):
+        calls.append(cmd)
+        return FakeProcess(list(lines), code)
+
+    monkeypatch.setattr(cli.subprocess, "Popen", popen)
+    return calls
+
+
+def test_install_browser_runs_the_command_with_this_python(capsys, monkeypatch):
+    calls = fake_popen(monkeypatch, ["Downloading Chromium\n"])
     monkeypatch.setattr(cli, "check_chromium", lambda: (True, "Chromium 9.9"))
     code, out, _ = run(capsys, "install-browser")
     assert code == 0
     assert calls == [[sys.executable, "-m", "playwright", "install", "chromium"]]
-    assert "Chromium 9.9" in out
+    assert "Downloading Chromium" in out and "Chromium 9.9" in out
 
 
 def test_install_browser_failure_is_friendly_and_shows_the_manual_command(capsys, monkeypatch):
-    monkeypatch.setattr(cli.subprocess, "call", lambda cmd: 1)
-    code, _, err = run(capsys, "install-browser", "--with-deps")
+    fake_popen(monkeypatch, code=1)
+    code, _, err = run(capsys, "install-browser")
     assert code == 3
     assert "stopped with status 1" in err
-    assert "--with-deps chromium" in err
+    assert "add --with-deps" in err  # not used yet, so it is worth suggesting
+
+
+def test_install_browser_does_not_suggest_with_deps_when_it_was_used(capsys, monkeypatch):
+    fake_popen(monkeypatch, code=1)
+    code, _, err = run(capsys, "install-browser", "--with-deps")
+    assert code == 3
+    assert "add --with-deps" not in err
+    assert "--with-deps chromium" in err  # the manual command still carries it
+
+
+def test_install_browser_hides_node_stack_traces_and_repeats(capsys, monkeypatch):
+    monkeypatch.delenv("CROSSWORD_POSTER_DEBUG", raising=False)
+    noise = [
+        "Error: Download failed: server returned code 403\n",
+        "    at ClientRequest.<anonymous> (/x/index.js:1:2)\n",
+        "    at Object.run (/x/index.js:3:4)\n",
+        "Error: Download failed: server returned code 403\n",
+        "Error: Download failed: server returned code 403\n",
+    ]
+    fake_popen(monkeypatch, noise, code=1)
+    _, out, _ = run(capsys, "install-browser")
+    assert "at ClientRequest" not in out
+    assert out.count("Download failed") == 1  # repeats of the same line are dropped
+    assert "2 lines of technical detail were hidden" in out
+
+
+def test_install_browser_shows_stack_traces_in_debug_mode(capsys, monkeypatch):
+    monkeypatch.setenv("CROSSWORD_POSTER_DEBUG", "1")
+    fake_popen(monkeypatch, ["Error: boom\n", "    at Object.run (/x/index.js:3:4)\n"], code=1)
+    _, out, _ = run(capsys, "install-browser")
+    assert "at Object.run" in out
 
 
 def test_install_browser_is_listed_in_the_help(capsys):
@@ -258,3 +321,16 @@ def test_piping_into_a_reader_that_has_gone_prints_no_traceback():
     proc.wait(timeout=60)
     proc.stderr.close()
     assert b"Traceback" not in err and b"BrokenPipeError" not in err
+
+
+def test_giveaways_are_listed_by_row_in_the_build_output():
+    lines = []
+    rep = dict(
+        rows_in=2, kept=2, notes=[], skipped=[], warnings=[],
+        giveaways=[dict(id="a", row=7, clue="Delhi (7,2,5)", contains="DELHI", itself=False),
+                   dict(id="b", row=9, clue="Dog dog", contains="DOG", itself=True)],
+    )  # fmt: skip
+    pipeline._brief_pool_report(rep, lines.append)
+    text = "\n".join(lines)
+    assert 'row 7: "Delhi (7,2,5)" contains the answer DELHI' in text
+    assert 'row 9: "Dog dog" contains its own answer' in text

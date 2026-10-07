@@ -6,6 +6,7 @@ import argparse
 import contextlib
 import csv
 import os
+import re
 import subprocess
 import sys
 from importlib import import_module, resources
@@ -231,11 +232,34 @@ def cmd_template(argv: list) -> int:
 
 
 # ----------------------------------------------------------- install-browser
+def _run_installer(cmd: list) -> int:
+    """Run the Playwright installer and show its output, without Node.js stack traces or repeated lines.
+
+    Those traces are noise for a person. They come back with CROSSWORD_POSTER_DEBUG=1.
+    """
+    debug = bool(os.environ.get("CROSSWORD_POSTER_DEBUG"))
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    hidden, last = 0, None
+    for line in proc.stdout:
+        text = line.rstrip("\n")
+        if not debug and re.match(r"\s+at \S", text):  # a stack frame such as "    at Object.<anonymous> (...)"
+            hidden += 1
+            continue
+        if text != last:
+            print(text, flush=True)
+        last = text
+    proc.stdout.close()
+    code = proc.wait()
+    if hidden and code:
+        print(f"({hidden} lines of technical detail were hidden; set CROSSWORD_POSTER_DEBUG=1 to see them)")
+    return code
+
+
 def cmd_install_browser(argv: list) -> int:
     """``install-browser``: download Playwright's Chromium with the Python that runs this program."""
     ap = argparse.ArgumentParser(
         prog="crossword-poster install-browser",
-        description="Download the Chromium browser that prints the poster (about 150 MB, one time). It runs "
+        description="Download the Chromium browser that prints the poster (a download of about 300 MB, one time). It runs "
         "`python -m playwright install chromium` with the same Python that runs crossword-poster, so it also works "
         "when crossword-poster was installed with pipx, uv or in a virtual environment.",
     )
@@ -245,7 +269,7 @@ def cmd_install_browser(argv: list) -> int:
     cmd = install_command(a.with_deps)
     print(f"Running: {install_command_text(a.with_deps)}", flush=True)
     try:
-        code = subprocess.call(cmd)
+        code = _run_installer(cmd)
     except OSError as exc:
         raise EnvironmentProblem(
             f"Could not run the browser installer ({exc.__class__.__name__}: {exc}).",
@@ -254,8 +278,9 @@ def cmd_install_browser(argv: list) -> int:
     if code != 0:
         raise EnvironmentProblem(
             f"The browser installer stopped with status {code}.",
-            "check your internet connection and disk space and try again; on Linux, add --with-deps. "
-            f"To run it yourself: {install_command_text(a.with_deps)}",
+            "check your internet connection and disk space and try again"
+            + ("" if a.with_deps else "; on Linux, add --with-deps")
+            + f". To run it yourself: {install_command_text(a.with_deps)}",
         )
     ok, detail = check_chromium()
     if not ok:

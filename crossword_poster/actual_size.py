@@ -104,6 +104,13 @@ def make_actual_size(
         f"     grid numbers {round(num_pt, 1):g} pt",
     )
 
+    pg.text(
+        0.5,
+        1.28,
+        8,
+        "The dashed windows show part of the poster and cut it off at their edges on purpose: check the sizes, not the layout.",
+    )
+
     def window(clip_in: tuple, dest_in: tuple, caption: str) -> None:
         sx, sy, w, h = (v * PT for v in clip_in)
         dx, dy = (v * PT for v in dest_in)

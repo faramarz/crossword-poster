@@ -36,6 +36,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from .errors import UserError
+from .pool import ENUM_RE
 
 ACROSS, DOWN = 0, 1
 DR = (0, 1)  # row step for ACROSS, DOWN
@@ -556,7 +557,8 @@ def write_grid_files(res: dict, outdir: str) -> None:
         w = csv.writer(f)
         w.writerow(["number", "direction", "clue", "answer", "id"])
         for c in rows:
-            w.writerow([c["number"], c["direction"], c["clue"], c["display_answer"], c["id"]])
+            clue = c["clue"] if ENUM_RE.search(c["clue"]) else f"{c['clue']} ({len(c['answer'])})"  # as on the poster
+            w.writerow([c["number"], c["direction"], clue, c["display_answer"], c["id"]])
 
 
 def _write(path: Optional[str], text: str) -> None:
