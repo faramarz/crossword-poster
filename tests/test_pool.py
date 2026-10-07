@@ -271,3 +271,149 @@ def test_bundled_samples_are_clean(sample):
     assert rep["warnings"] == []
     assert rep["giveaways"] == []
     assert len(rows) >= 45
+
+
+# ------------------------------------------------------- limits and guards (round 2)
+def test_overlong_clue_is_skipped_with_its_length(tmp_path):
+    long_clue = "word " * 80  # 400 characters
+    path = write_csv(
+        tmp_path / "x.csv", [(long_clue, "Paris"), ("Capital of Italy", "Rome"), ("Capital of Spain", "Madrid")]
+    )
+    rows, rep = build(path)
+    assert [r["grid"] for r in rows] == ["ROME", "MADRID"]
+    reason = rep["skipped"][0]["reason"]
+    assert "the clue is 399 characters" in reason
+    assert f"the limit is {pool.MAX_CLUE_LEN}" in reason
+
+
+def test_clue_at_the_limit_is_accepted(tmp_path):
+    clue = "x" * pool.MAX_CLUE_LEN
+    path = write_csv(tmp_path / "x.csv", [(clue, "Paris"), ("Capital of Italy", "Rome")])
+    rows, _ = build(path)
+    assert len(rows) == 2
+
+
+def test_too_many_clues_is_a_friendly_error(tmp_path):
+    import itertools
+    import string
+
+    words = ("".join(t) for t in itertools.product(string.ascii_uppercase, repeat=3))
+    rows = [(f"Clue number {i}", next(words)) for i in range(pool.MAX_WORDS + 1)]
+    path = write_csv(tmp_path / "x.csv", rows)
+    with pytest.raises(UserError) as exc:
+        build(path)
+    assert f"the limit is {pool.MAX_WORDS}" in exc.value.message
+    assert "split" in exc.value.hint
+
+
+def test_word_limit_itself_is_allowed(tmp_path):
+    import itertools
+    import string
+
+    words = ("".join(t) for t in itertools.product(string.ascii_uppercase, repeat=3))
+    rows = [(f"Clue number {i}", next(words)) for i in range(pool.MAX_WORDS)]
+    got, rep = build(write_csv(tmp_path / "x.csv", rows))
+    assert len(got) == pool.MAX_WORDS
+    assert any("a lot for one poster" in w for w in rep["warnings"])
+
+
+def test_swapped_columns_are_detected_and_the_fix_is_given(tmp_path):
+    # the "answers" are sentences, so they are rejected as too long: the error must still point at the swap
+    path = write_csv(
+        tmp_path / "x.csv",
+        [
+            ("Paris", "The capital city of France"),
+            ("Rome", "The eternal city in Italy"),
+            ("Madrid", "Spain's capital on the plateau"),
+        ],
+    )
+    with pytest.raises(UserError) as exc:
+        build(path)
+    assert "--clue-column 'answer' --answer-column 'clue'" in exc.value.hint
+
+
+def test_swapped_columns_warn_when_some_rows_survive(tmp_path):
+    path = write_csv(
+        tmp_path / "x.csv",
+        [
+            ("Paris", "The capital city of France"),
+            ("Rome", "The eternal city in Italy"),
+            ("The place where a famous leaning tower stands", "Pisa"),
+            ("Madrid", "Spain's capital on the plateau"),
+            ("Home of Big Ben", "London"),
+        ],
+    )
+    _, rep = build(path)
+    swapped = [w for w in rep["warnings"] if "swap" in w]
+    assert swapped
+    assert "--clue-column 'answer' --answer-column 'clue'" in swapped[0]
+
+
+def test_normal_columns_do_not_trigger_the_swap_warning(tmp_path):
+    path = write_csv(
+        tmp_path / "x.csv",
+        [("The capital city of France", "Paris"), ("Where the Colosseum stands", "Rome"), ("Prado home", "Madrid")],
+    )
+    _, rep = build(path)
+    assert not [w for w in rep["warnings"] if "swap" in w]
+
+
+def test_long_answers_such_as_big_ben_do_not_trigger_the_swap_warning(tmp_path):
+    path = write_csv(
+        tmp_path / "x.csv", [("Clock tower", "Big Ben"), ("Home of the Eiffel Tower", "Paris"), ("Hello", "Hi")]
+    )
+    _, rep = build(path)
+    assert not [w for w in rep["warnings"] if "swap" in w]
+
+
+def test_hyphenated_answer_gets_a_hyphenated_enumeration(tmp_path):
+    path = write_csv(tmp_path / "x.csv", [("Your spouse's mother", "Mother-in-law"), ("Capital", "Paris")])
+    rows, rep = build(path)
+    assert rows[0]["clue"] == "Your spouse's mother (6-2-3)"
+    assert not warnings_of(rep)
+
+
+def test_apostrophe_answer_is_one_word_and_keeps_its_letters(tmp_path):
+    path = write_csv(tmp_path / "x.csv", [("Irish surname", "O'Brien"), ("Capital", "Paris")])
+    rows, rep = build(path)
+    assert rows[0]["grid"] == "OBRIEN"
+    assert rows[0]["clue"] == "Irish surname"  # a single plain word: the length is added at render time
+    assert not warnings_of(rep)
+
+
+def test_corrupt_xlsx_is_a_friendly_error(tmp_path):
+    pytest.importorskip("openpyxl")
+    path = tmp_path / "bad.xlsx"
+    path.write_bytes(b"PK\x03\x04 this is not really a workbook")
+    with pytest.raises(UserError) as exc:
+        build(path)
+    assert "could not be read as an Excel file" in exc.value.message
+    assert "CSV" in exc.value.hint
+
+
+def test_truncated_xlsx_is_a_friendly_error(tmp_path):
+    openpyxl = pytest.importorskip("openpyxl")
+    wb = openpyxl.Workbook()
+    wb.active.append(["Clue", "Answer"])
+    for i in range(50):
+        wb.active.append([f"Clue {i}", f"Word{'abcdefghij'[i % 10]}"])
+    good = tmp_path / "good.xlsx"
+    wb.save(good)
+    data = good.read_bytes()
+    bad = tmp_path / "bad.xlsx"
+    bad.write_bytes(data[: len(data) // 2])
+    with pytest.raises(UserError) as exc:
+        build(bad)
+    assert "Excel file" in exc.value.message
+
+
+def test_header_listing_in_errors_is_clipped(tmp_path):
+    header = [f"column_{i}_" + "x" * 80 for i in range(40)]
+    path = tmp_path / "wide.csv"
+    path.write_text(",".join(header) + "\n" + ",".join("a" * 5 for _ in header) + "\n", encoding="utf-8")
+    with pytest.raises(UserError) as exc:
+        build(path)
+    msg = exc.value.message
+    assert len(msg) < 700
+    assert "... and 30 more" in msg
+    assert "x" * 60 not in msg

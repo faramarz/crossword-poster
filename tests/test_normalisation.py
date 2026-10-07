@@ -30,8 +30,15 @@ def test_grid_word(text, expected):
         ("Paris", ""),
         ("Big Ben", "(3,3)"),
         ("Milky Way", "(5,3)"),
-        ("Mother-in-law", "(6,2,3)"),
+        ("Mother-in-law", "(6-2-3)"),
         ("Café au lait", "(4,2,4)"),
+        ("O'Brien", ""),
+        ("Mary-Anne's", "(4-5)"),
+        ("Rock 'n' roll", "(4,1,4)"),
+        ("Jack-in-the-box and O'Brien", "(4-2-3-3,3,6)"),
+        ("  Big   Ben  ", "(3,3)"),
+        ("Well-known", "(4-5)"),
+        ("-", ""),
     ],
 )
 def test_enumeration(display, expected):

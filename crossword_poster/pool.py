@@ -41,6 +41,8 @@ DEFAULT_MIN_LEN = 2
 DEFAULT_MAX_LEN = 20
 SPARSE_BELOW = 8
 CROWDED_ABOVE = 120
+MAX_WORDS = 400
+MAX_CLUE_LEN = 300
 
 # letters that Unicode decomposition does not turn into A-Z
 _SPECIAL = str.maketrans(
@@ -65,9 +67,19 @@ def _words(text: str) -> list[str]:
 
 
 def enumeration(display: str) -> str:
-    """``'Big Ben'`` -> ``'(3,3)'``; an empty string for a single word."""
-    parts = [len(grid_word(p)) for p in re.split(r"[^A-Za-z0-9À-ɏ]+", display or "") if grid_word(p)]
-    return "(" + ",".join(map(str, parts)) + ")" if len(parts) > 1 else ""
+    """``'Big Ben'`` -> ``'(3,3)'``, ``'Mother-in-law'`` -> ``'(6-2-3)'``; empty for a single plain word.
+
+    Only spaces separate words; hyphens join the parts of one word (written with ``-``); apostrophes and other
+    punctuation are not letters and are not counted.
+    """
+    tokens = []
+    for token in (display or "").split():
+        parts = [n for n in (len(grid_word(p)) for p in re.split("[-\u2010-\u2014]", token)) if n]
+        if parts:
+            tokens.append("-".join(map(str, parts)))
+    if len(tokens) == 1 and "-" not in tokens[0]:
+        return ""
+    return "(" + ",".join(tokens) + ")" if tokens else ""
 
 
 def enumeration_total(clue: str) -> Optional[int]:
@@ -118,14 +130,19 @@ def _read_xlsx(path: str) -> tuple[list[list[str]], list[str]]:
         ) from None
     try:
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    except Exception as exc:
-        raise UserError(f"{path} could not be opened as an Excel file ({exc}).", "re-save it, or export a CSV") from exc
-    try:
-        ws = wb.worksheets[0]
-        rows = [["" if v is None else str(v) for v in row] for row in ws.iter_rows(values_only=True)]
-        note = f"read the first sheet ('{ws.title}') of the workbook" if len(wb.worksheets) > 1 else None
-    finally:
-        wb.close()
+        try:
+            ws = wb.worksheets[0]
+            rows = [["" if v is None else str(v) for v in row] for row in ws.iter_rows(values_only=True)]
+            note = f"read the first sheet ('{ws.title}') of the workbook" if len(wb.worksheets) > 1 else None
+        finally:
+            wb.close()
+    except UserError:
+        raise
+    except Exception as exc:  # corrupt zip, malformed XML, ... : anything inside the file is a user-file problem
+        raise UserError(
+            f"{path} could not be read as an Excel file ({type(exc).__name__}).",
+            "open it in Excel / Sheets and save it again, or export a CSV UTF-8 file",
+        ) from exc
     return rows, [note] if note else []
 
 
@@ -142,6 +159,13 @@ def read_table(path: str) -> tuple[list[list[str]], list[str]]:
     return rows, notes
 
 
+def _show_headers(headers: list[str]) -> str:
+    """The header cells for an error message: at most 10, each clipped, so a junk file cannot flood the screen."""
+    shown = [repr(h if len(h) <= 40 else h[:37] + "...") for h in headers if h.strip()][:10]
+    more = len([h for h in headers if h.strip()]) - len(shown)
+    return (", ".join(shown) or "(none)") + (f" ... and {more} more" if more > 0 else "")
+
+
 def find_column(headers: list[str], names, explicit: Optional[str], what: str, required: bool = True) -> Optional[int]:
     """Index of the column called ``explicit`` or, failing that, any of ``names`` (case-insensitive)."""
     norm = [h.strip().lower() for h in headers]
@@ -150,15 +174,14 @@ def find_column(headers: list[str], names, explicit: Optional[str], what: str, r
             return norm.index(explicit.strip().lower())
         raise UserError(
             f"There is no column called '{explicit}' (the {what} column).",
-            f"the columns in your file are: {', '.join(repr(h) for h in headers if h.strip())}",
+            f"the columns in your file are: {_show_headers(headers)}",
         )
     for n in names:
         if n in norm:
             return norm.index(n)
     if required:
         raise UserError(
-            f"Could not find the {what} column. The columns in your file are: "
-            f"{', '.join(repr(h) for h in headers if h.strip()) or '(none)'}.",
+            f"Could not find the {what} column. The columns in your file are: {_show_headers(headers)}.",
             f"rename the header cell to '{names[0]}', or pass --{what}-column NAME. "
             "`crossword-poster template my_clues.csv` writes a correct starter file.",
         )
@@ -201,12 +224,14 @@ def build_pool(
     warnings: list[str] = []
     seen: dict[str, int] = {}
     used_ids: set[str] = set()
+    pairs: list[tuple[str, str]] = []
     blank = 0
     for n, row in enumerate(table[1:], start=2):  # n = the row number a spreadsheet shows
         if not any(c.strip() for c in row):
             blank += 1
             continue
         clue, display = cell(row, ci), cell(row, ai)
+        pairs.append((clue, display))
         gw = grid_word(cell(row, gi) or display)
         rid = cell(row, ii) or f"row{n}"
         why = _reject_reason(clue, display, gw, min_len, max_len)
@@ -227,11 +252,25 @@ def build_pool(
         clue = _with_enumeration(clue, display, gw, cell(row, ei), n, warnings)
         rows.append(dict(grid=gw, clue=clue, display=display, id=rid, row=n))
 
+    swap = ""
+    if looks_swapped(pairs):
+        swap = (
+            f"The '{headers[ci]}' column looks like it holds answers and the '{headers[ai]}' column looks like it "
+            f"holds clues. If so, swap them: --clue-column '{headers[ai]}' --answer-column '{headers[ci]}' "
+            "(or exchange the two header cells in your file)."
+        )
     if len(rows) < 2:
         raise UserError(
             f"Only {len(rows)} usable clue(s) found in {path}; a crossword needs at least 2.",
-            "check the skipped rows listed above, or add more clues",
+            swap or "check the skipped rows listed above, or add more clues",
         )
+    if len(rows) > MAX_WORDS:
+        raise UserError(
+            f"{len(rows)} usable clues in {path}; the limit is {MAX_WORDS} (a poster works best with 30 to 60).",
+            "split the file into several posters, or keep the best clues",
+        )
+    if swap:
+        warnings.append(swap)
     if len(rows) < SPARSE_BELOW:
         warnings.append(f"Only {len(rows)} clues: the poster will look sparse. About 30 to 60 clues works best.")
     if len(rows) > CROWDED_ABOVE:
@@ -246,6 +285,15 @@ def build_pool(
     return rows, report
 
 
+def looks_swapped(pairs: list[tuple[str, str]]) -> bool:
+    """True when most rows have a wordy 'answer' (4+ words) and a clue with fewer words: the columns are swapped."""
+    pairs = [(c, a) for c, a in pairs if c and a]
+    if len(pairs) < 2:
+        return False
+    wordy = sum(1 for c, a in pairs if len(a.split()) >= 4 and len(a.split()) > len(c.split()))
+    return wordy * 2 >= len(pairs)
+
+
 def _reject_reason(clue: str, display: str, gw: str, min_len: int, max_len: int) -> Optional[str]:
     """Why a row cannot be used, in plain language (None when it is fine)."""
     if not clue and not display:
@@ -254,6 +302,8 @@ def _reject_reason(clue: str, display: str, gw: str, min_len: int, max_len: int)
         return "missing clue"
     if not display:
         return "missing answer"
+    if len(clue) > MAX_CLUE_LEN:
+        return f"the clue is {len(clue)} characters; the limit is {MAX_CLUE_LEN} (shorten it)"
     if re.search(r"\d", display):
         return "the answer contains a digit; crossword answers are letters only (spell numbers out, e.g. 'Nineteen eighty four')"
     stray = sorted({ch for ch in _fold(display) if ch.isalpha() and not ("A" <= ch <= "Z")})
