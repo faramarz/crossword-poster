@@ -314,7 +314,7 @@ def test_word_limit_itself_is_allowed(tmp_path):
     rows = [(f"Clue number {i}", next(words)) for i in range(pool.MAX_WORDS)]
     got, rep = build(write_csv(tmp_path / "x.csv", rows))
     assert len(got) == pool.MAX_WORDS
-    assert any("about the most one poster can hold" in w for w in rep["warnings"])
+    assert any("a lot for one poster" in w for w in rep["warnings"])
 
 
 def test_swapped_columns_are_detected_and_the_fix_is_given(tmp_path):

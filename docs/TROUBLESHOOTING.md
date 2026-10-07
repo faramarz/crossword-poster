@@ -267,11 +267,11 @@ longer. To go faster, add `--no-verify`, or `--no-crops` which skips only the sl
 
 ### "The clues do not fit on a ... poster at a readable size"
 
-The layout code could not fit all the clues on the poster at a readable size. The message ends with the fix. On 18x24,
-choose `--size 24x36`. The 24x36 size holds the most clues (about 200 to 230 typical ones), because the bigger 36x48
-size also asks for bigger squares and bigger text, so it holds fewer. On 24x36 or bigger, use fewer or shorter clues
-instead. See [How many clues fit each poster size?](GUIDE.md#very-large-lists-about-150-clues-and-more). The build exits with
-code 2 and writes no poster. This is rare. A more common
+The layout code could not fit all the clues on the poster even at the smallest size it allows (squares of 0.3 in and
+clue text of 9 pt). The message ends with the fix: choose a bigger `--size` (a bigger poster always holds at least as
+many clues as a smaller one), or use fewer or shorter clues. See
+[Very large lists](GUIDE.md#very-large-lists-about-150-clues-and-more). The build exits with code 2 and writes no
+poster. This is rare. A more common
 case is that the poster is built but the type is very small, so always read the `clue text is ... pt` line in the summary.
 
 ### "Output checks: SOME FAILED"

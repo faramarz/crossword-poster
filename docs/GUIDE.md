@@ -70,7 +70,7 @@ and the print shop.
 Short answer: **30 to 60 clues is a good range for most posters.** More clues make smaller squares. Fewer clues make
 bigger squares, and when there are very few the tool makes the clue text bigger so the poster does not look empty.
 
-I measured this with version 1.0.0 by building made-up clue lists of 20 to 250 clues at three sizes, with the default
+I measured this with version 1.0.0 by building made-up clue lists of 20 to 300 clues at three sizes, with the default
 `grey` style. The clues averaged 6.6 words and the answers 6.7 letters. Your numbers will differ a little with your own
 clue lengths and answers: longer clues and longer answers mean smaller squares.
 
@@ -84,16 +84,19 @@ clue lengths and answers: longer clues and longer answers mean smaller squares.
 | 70 | 30 x 31 | 0.56 in, 14 mm (11.3 pt) | 0.76 in, 19 mm (18.0 pt) | 1.15 in, 29 mm (23.3 pt) |
 | 100 | 36 x 37 | 0.47 in, 12 mm (9.7 pt) | 0.64 in, 16 mm (18.0 pt) | 0.96 in, 24 mm (19.8 pt) |
 | 150 | 45 x 42 | 0.38 in, 10 mm (9.4 pt) | 0.51 in, 13 mm (16.4 pt) | 0.76 in, 19 mm (19.4 pt) |
-| 200 | 50 x 50 | does not fit | 0.46 in, 12 mm (12.9 pt) | does not fit |
-| 250 | 57 x 56 | does not fit | does not fit | does not fit |
+| 200 | 50 x 50 | 0.30 in, 8 mm (9.6 pt, **tight**) | 0.46 in, 12 mm (12.9 pt) | 0.69 in, 17 mm (14.7 pt, **tight**) |
+| 250 | 57 x 56 | does not fit | 0.40 in, 10 mm (11.7 pt, **tight**) | 0.60 in, 15 mm (13.4 pt, **tight**) |
+| 300 | 61 x 60 | does not fit | 0.38 in, 10 mm (10.6 pt, **tight**) | 0.56 in, 14 mm (12.2 pt, **tight**) |
 
 One inch is 25.4 mm. A square of 0.6 in is about 15 mm. "Does not fit" means the build stops with a message and writes
-no poster, because the squares or the text would come out below the tool's minimums (see "Very large lists" below).
-"Blank foot" means the poster has 8 percent or more of its height empty at the bottom, which the build reports as a
-warning. Only the 20 clue row has that, because there are so few clues for the size.
+no poster, because even the smallest allowed squares (0.3 in) and text (9 pt) would not hold the clues. "Blank foot"
+means the poster has 8 percent or more of its height empty at the bottom, which the build reports as a warning. Only the
+20 clue row has that, because there are so few clues for the size. "Tight" means the poster is below the size the tool
+prefers for that poster size (see below). The build prints a warning, but the poster is still legible. A bigger poster
+size never holds fewer clues than a smaller one, and its squares and text are never smaller.
 
 **In real use, a 214-clue list fit on 24 x 36 in with 0.46 in (11.6 mm) squares and 12.3 pt clue text.** The
-grid for it was 50 x 51 squares.
+grid for it was 50 x 51 squares. On 36 x 48 the same list got 0.69 in (17.5 mm) squares and 13.8 pt text.
 
 How to read this table:
 
@@ -102,22 +105,26 @@ How to read this table:
   rule. Check your own poster with the [actual-size page](#6-check-before-printing).
 - **Clue text size** is in points. 12 pt is the size of ordinary book text. On a poster people read from an arm's length
   or more away, so 14 pt and up is comfortable. For a normal number of clues the tool uses up to 14 pt on 18 x 24, 18 pt
-  on 24 x 36, or 27 pt on 36 x 48. The build warns if the text comes out under 9 pt or the squares under 0.3 in.
+  on 24 x 36, or 27 pt on 36 x 48. The build never goes below 9 pt text or 0.3 in squares: if the clues would need less, it stops instead.
 - **Empty space.** When you have few clues, the grid gets big squares and the clue text reaches its normal upper limit.
   If that would leave 8 percent or more of the height empty at the bottom, the tool makes the clue text bigger (up to
   1.5 times the normal limit, which is why the first row shows 27 pt and 40.5 pt) until the page is filled. If a poster
   is still 8 percent or more empty, the build says so. Then pick a smaller poster or add clues.
-- **Too many clues.** The tool warns above 220 clues and refuses more than 400. The refusal is only a safety limit: no
-  poster holds anywhere near 400. In practice the most that fits is about 200 to 230 typical clues on 24 x 36. A clue
-  longer than 300 characters is skipped: shorten it.
+- **Preferred and minimum sizes.** Each poster size has a size it prefers: squares of at least 0.45 in and text of at
+  least 11 pt on 24 x 36 (0.33 in and 9 pt on 18 x 24, 0.675 in and 16.5 pt on 36 x 48). If the clues do not fit at
+  that size, the tool keeps shrinking, down to a minimum that is the same for every poster size: squares of 0.3 in and
+  text of 9 pt. When it goes below the preferred size it says so in a warning. Below the minimum, the build stops.
+- **Too many clues.** The tool warns above 250 clues and refuses more than 400. The refusal is only a safety limit. In
+  my tests about 300 clues still fit on 24 x 36 and 36 x 48 with small squares (0.38 in on 24 x 36), and 350 was at the
+  edge. A clue longer than 300 characters is skipped: shorten it.
 
 **Good starting points**
 
 | Poster | Inches | Centimetres | Good for |
 |---|---|---|---|
-| 18 x 24 | 18 x 24 | 46 x 61 | 30 to 70 clues (about 100 at most before it gets tiny). Fits a smaller wall or a table. Cheapest. |
-| 24 x 36 | 24 x 36 | 61 x 91 | 40 to 150 clues, and the only size that fits 200 or more. The classic "movie poster" size. Best all-round choice. |
-| 36 x 48 | 36 x 48 | 91 x 122 | 70 to 150 clues, with big squares and big text. Big enough for a crowd. Costs more and needs a large wall. |
+| 18 x 24 | 18 x 24 | 46 x 61 | 30 to 70 clues (about 150 at most, with tiny squares). Fits a smaller wall or a table. Cheapest. |
+| 24 x 36 | 24 x 36 | 61 x 91 | 40 to 150 clues, and up to about 250 with smaller squares. The classic "movie poster" size. Best all-round choice. |
+| 36 x 48 | 36 x 48 | 91 x 122 | 70 to 200 clues, with big squares and big text. Big enough for a crowd. Costs more and needs a large wall. |
 
 Outside North America you may prefer A sizes. A2 is `16.54x23.39` and A1 is `23.39x33.11` (in inches). Both work. See
 the [FAQ](TROUBLESHOOTING.md#can-i-use-a2-a1-or-another-size).
@@ -126,18 +133,19 @@ the [FAQ](TROUBLESHOOTING.md#can-i-use-a2-a1-or-another-size).
 
 If you have a lot of clues, this is how to get the most onto one poster:
 
-1. **Choose 24 x 36** (`--size 24x36`). It is the size that holds the most clues. 36 x 48 is not "more room" for this
-   purpose: it also asks for bigger squares and bigger text (its minimums are 1.5 times those of 24 x 36), and its
-   shape is less tall for its width, so it holds fewer clues: 150 fit in my tests and 200 did not. 18 x 24 has the smallest
-   minimums but also the least space: 150 clues fit, but only with 0.38 in squares and 9 pt text.
-2. **Expect smaller squares.** At 200 clues the squares are about 0.46 in (11.6 mm). That is workable for a pen, but
-   tight. The clue text is about 12 to 13 pt, like a book.
-3. **Know where the limit is.** Past roughly 215 to 230 clues, even 24 x 36 stops fitting and the build says so. Then
+1. **Go up a size, not down.** A bigger poster always holds at least as many clues as a smaller one, with squares and
+   text at least as big. For 200 clues or more, choose `--size 24x36` or `--size 36x48`. 18 x 24 only just manages 200
+   (0.3 in squares, the smallest the tool allows) and does not fit 250.
+2. **Expect smaller squares.** At 200 clues on 24 x 36 the squares are about 0.46 in (12 mm), which is
+   workable for a pen but tight. At 250 they are 0.40 in and at 300, 0.38 in. The clue text is about 11 to 13 pt, like
+   a book. The build warns when a poster is below the size the tool prefers.
+3. **Know where the limit is.** Squares never go below 0.3 in and text never below 9 pt. In my tests about 300 clues
+   was the most that fit on 24 x 36, and 350 only fit on one of two layouts. If the build says the clues do not fit,
    drop the weakest clues, or shorten long ones: shorter clues and shorter answers both help.
 4. **Give the search time.** The grid search grows quickly with the number of clues. In my tests it took about 27
-   seconds for 150 clues, 45 seconds for 200 and 70 seconds for 250, on a two-core computer, and it stops at 180
-   seconds. If you have more than 200 clues, you can pass `--time-limit 300` (seconds) to let it look longer for a
-   tighter layout, or `--time-limit 60` to get a quick answer. A tighter grid means bigger squares.
+   seconds for 150 clues, 45 seconds for 200, 70 seconds for 250 and 2 to 3 minutes for 300, on a two-core computer, and
+   it stops at 180 seconds by default. If you have more than 250 clues, pass `--time-limit 300` (seconds) to let it look
+   longer for a tighter layout, or `--time-limit 60` for a quick answer. A tighter grid means bigger squares.
 5. **Check the summary line.** The build prints the square size and clue text size. Open the actual-size page before you
    print.
 

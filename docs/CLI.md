@@ -167,8 +167,8 @@ The printed length is added at the end of each clue.
   its own answer, is reported as a possible giveaway. The build lists them by row number (the full list is in
   `<out>/details/pool_report.json`). It is a warning only.
 - **Few or many clues.** Fewer than 2 usable clues is an error. Fewer than 8 gives a "will look sparse" warning. More
-  than 220 gives an "about the most one poster can hold" warning. More than 400 usable clues is an error (no poster
-  holds that many): split the file, or keep the best.
+  than 250 gives a "a lot for one poster" warning. More than 400 usable clues is an error (a safety limit, far beyond
+  what is readable): split the file, or keep the best.
 - **Long clues.** A clue longer than 300 characters is skipped, with its length shown, because it cannot be laid out
   legibly. Shorten it.
 - **Swapped columns.** If most "answers" are three or more words and longer than their "clues", the tool warns that the

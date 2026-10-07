@@ -38,6 +38,13 @@ from .validate import check_shape
 DEFAULT_TITLE = "My Crossword"
 DEFAULT_BYLINE = "A custom crossword poster."
 
+# The same legibility floor applies to every poster size, so a bigger poster never fits fewer clues than a smaller one.
+# Each size's fs_min / cell_min below is only the PREFERRED minimum: when the clues cannot meet it, the fit goes on down
+# to this floor and the build warns instead of failing.
+MIN_CLUE_PT = 9.0  # smaller type is hard to read from a normal viewing distance
+MIN_SQUARE_IN = 0.3  # smaller squares are hard to write a letter in
+MAX_BLANK = 0.08  # more blank height than this at the foot of the poster looks unfinished
+
 # tuned per-trim-size knobs (inches / points); other sizes are derived by scaling the nearest of these
 SIZES = {
     "24x36": dict(
@@ -55,7 +62,7 @@ SIZES = {
     "18x24": dict(
         margin=0.5,
         gutter=0.15,
-        fs_min=8.0,
+        fs_min=9.0,
         fs_max=14.0,
         cell_min=0.33,
         rule=2.5,
@@ -85,7 +92,7 @@ def size_config(trim):
     w, h = parse_size(key)
     for name, cfg in SIZES.items():
         if parse_size(name) == (w, h):
-            return dict(cfg)
+            return _above_floor(dict(cfg))
     base_name = min(SIZES, key=lambda n: abs(parse_size(n)[0] - w))
     k = w / parse_size(base_name)[0]
     b = SIZES[base_name]
@@ -93,7 +100,14 @@ def size_config(trim):
     for f in ("margin", "gutter", "fs_min", "fs_max", "cell_min", "rule", "sw", "outer", "tmax"):
         out[f] = round(b[f] * k, 4)
     out["margin"] = max(out["margin"], 0.3)
-    return out
+    return _above_floor(out)
+
+
+def _above_floor(cfg: dict) -> dict:
+    """The preferred minimums can never be below the shared legibility floor (small derived sizes would otherwise be)."""
+    cfg["fs_min"] = max(cfg["fs_min"], MIN_CLUE_PT)
+    cfg["cell_min"] = max(cfg["cell_min"], MIN_SQUARE_IN)
+    return cfg
 
 
 # --------------------------------------------------------------- grid / clues (copied from render.py, trimmed)
@@ -402,9 +416,10 @@ function maxLh(P,fs){
   while(v>1.07&&!feasible(P,fs,v))v=Math.round((v-0.001)*1000)/1000;
   return Math.max(1.07,v);
 }
+let FSMIN=D.fsMin,CELLMIN=D.cellMin;
 function maxFs(P){
   const wcpt=P.wc/PT;
-  let hi=Math.min(D.fsMax,wcpt/D.minRatio),lo=D.fsMin;
+  let hi=Math.min(D.fsMax,wcpt/D.minRatio),lo=FSMIN;
   if(hi<lo)return null;
   if(!feasible(P,lo))return null;
   if(feasible(P,hi))return hi;
@@ -412,7 +427,7 @@ function maxFs(P){
   // the pour is not perfectly monotone: probe a little above
   let best=lo;for(let s=Math.round((lo+0.05)*100)/100;s<=Math.min(lo+0.6,D.fsMax);s=Math.round((s+0.05)*100)/100){if(feasible(P,s))best=s;}
   let v=Math.floor(best*20)/20;
-  while(v>D.fsMin&&!feasible(P,v))v=Math.round((v-0.05)*100)/100;
+  while(v>FSMIN&&!feasible(P,v))v=Math.round((v-0.05)*100)/100;
   return feasible(P,v)?v:null;
 }
 /* balance: the largest common shortfall d that still pours, so every column ends at about the same height */
@@ -443,17 +458,17 @@ function growText(P,fs){
   }
   return{fs:best,blank,grown:best>fs};
 }
-function fitAll(){
+function fitPass(){
   const log=[];
   for(const frac of D.tfracs){
     const hd=buildHeader(frac),yG=hd.h+Gpx;
     const cands=[];
     for(let kT=3;kT<=22;kT++){
       const wcpt=((Wpx-(kT-1)*Gpx)/kT)/PT;
-      if(wcpt<D.fsMin*D.minRatio||wcpt>D.fsMax*D.maxRatio*1.0+D.fsMin*0) continue;
+      if(wcpt<FSMIN*D.minRatio||wcpt>D.fsMax*D.maxRatio) continue;
       for(let m=kT;m>=1;m--){
         const P=planGeom(kT,m,yG,hd.h);
-        if(P.cell<D.cellMin-1e-9)break;
+        if(P.cell<CELLMIN-1e-9)break;
         if(m<kT&&D.mode==='full')continue;
         cands.push(P);
       }
@@ -476,6 +491,16 @@ function fitAll(){
     }
   }
   return{ok:false,log};
+}
+/* the per-size minimums are PREFERRED: when they cannot be met, go on down to the shared legibility floor */
+function fitAll(){
+  FSMIN=D.fsMin;CELLMIN=D.cellMin;
+  const r=fitPass();
+  if(r.ok||(D.fsFloor>=D.fsMin&&D.cellFloor>=D.cellMin))return Object.assign(r,{belowPreferred:false,prefFs:D.fsMin,prefCell:D.cellMin});
+  FSMIN=Math.min(D.fsFloor,D.fsMin);CELLMIN=Math.min(D.cellFloor,D.cellMin);
+  const r2=fitPass();
+  r2.log=r.log.concat(r2.log);
+  return Object.assign(r2,{belowPreferred:r2.ok&&(r2.fs<D.fsMin-1e-9||r2.cell<D.cellMin-1e-9),prefFs:D.fsMin,prefCell:D.cellMin});
 }
 
 /* ---------- apply a plan ---------- */
@@ -614,6 +639,7 @@ def build_data(an, tcfg, cw, ch, key=False, icons=None, fill="#000000", title=DE
     return dict(
         rows=an["rows"], cols=an["cols"], cells=cells, entries=an["entries"], key=key, icons=icons or [], blockFill=fill,
         W=cw, H=ch, g=tcfg["gutter"], fsMin=tcfg["fs_min"], fsMax=tcfg["fs_max"], cellMin=tcfg["cell_min"],
+        fsFloor=MIN_CLUE_PT, cellFloor=MIN_SQUARE_IN,
         sw=tcfg["sw"], outer=tcfg["outer"], numRatio=0.27, tmax=tcfg["tmax"], byRatio=0.25, byEm=13.0,
         title=title, byline=byline,
         tfracs=tcfg.get("tfracs", [1.0, 0.9, 0.8, 0.7, 0.6]), mode=tcfg.get("mode", "any"),
@@ -728,11 +754,6 @@ def render_solution(ctx, an: dict, outroot: str, opts: RenderOptions) -> dict:
     return dict(info, page=f"{pwid}x{phei}")
 
 
-MIN_CLUE_PT = 9.0  # smaller type is hard to read from a normal viewing distance
-MIN_SQUARE_IN = 0.3  # smaller squares are hard to write a letter in
-MAX_BLANK = 0.08  # more blank height than this at the foot of the poster looks unfinished
-
-
 def size_warnings(trim: str, fit: dict) -> list[str]:
     """Plain-language warnings about a fitted poster (an empty list when the layout is comfortable)."""
     out = []
@@ -746,6 +767,16 @@ def size_warnings(trim: str, fit: dict) -> list[str]:
             f"Poster {trim}: the squares are only {fit['cell']:.2f} in wide (below {MIN_SQUARE_IN:g} in), which is too "
             "small to write a letter in. Fix: a bigger --size, or fewer or shorter answers."
         )
+    if fit.get("belowPreferred"):
+        low = []
+        if fit["cell"] < fit["prefCell"] - 1e-9:
+            low.append(f"the squares are {fit['cell']:.3f} in (this size aims for {fit['prefCell']:.3f} in or more)")
+        if fit["fs"] < fit["prefFs"] - 1e-9:
+            low.append(f"the clue text is {fit['fs']:.1f} pt (this size aims for {fit['prefFs']:.1f} pt or more)")
+        out.append(
+            f"Poster {trim}: to fit every clue, {' and '.join(low)}. It is still legible. "
+            "Fix, if you want it roomier: fewer or shorter clues."
+        )
     blank = fit.get("blankFrac", 0.0)
     if blank >= MAX_BLANK:
         out.append(
@@ -757,15 +788,10 @@ def size_warnings(trim: str, fit: dict) -> list[str]:
 
 def no_fit_error(trim: str) -> UserError:
     """The error for clues that cannot be fitted at a readable size; the hint depends on how big the poster already is."""
-    width = parse_size(trim)[0]
-    if width < 24:
-        hint = "use a bigger --size (24x36 holds the most clues), or fewer / shorter clues"
-    elif width < 36:
-        hint = (
-            "use fewer or shorter clues (24x36 already holds the most; about 200 typical clues is close to its limit)"
-        )
+    if parse_size(trim)[0] < 36:
+        hint = "use a bigger --size (a bigger poster always holds at least as many clues), or fewer / shorter clues"
     else:
-        hint = "try --size 24x36, which holds more clues than the larger sizes, or use fewer or shorter clues"
+        hint = "use fewer or shorter clues (36x48 is already the biggest tuned size)"
     return UserError(f"The clues do not fit on a {trim} poster at a readable size.", hint)
 
 

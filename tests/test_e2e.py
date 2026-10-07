@@ -273,3 +273,104 @@ def test_a_build_with_hyphenated_and_blank_clues_passes_every_check(tmp_path, ca
     out = capsys.readouterr().out
     assert code == 0, out
     assert "Output checks: all passed" in out
+
+
+def _realistic_rows(n, seed=5):
+    """N made-up clue/answer rows with realistic lengths (clues of 4 to 9 words, answers of 3 to 10 letters)."""
+    import random
+
+    rnd = random.Random(seed)
+    vocab = [
+        "the",
+        "a",
+        "his",
+        "her",
+        "old",
+        "first",
+        "long",
+        "best",
+        "our",
+        "song",
+        "and",
+        "of",
+        "with",
+        "who",
+        "in",
+        "at",
+        "on",
+        "to",
+        "home",
+        "park",
+        "trip",
+        "cake",
+        "dog",
+        "car",
+        "road",
+        "hat",
+        "swim",
+        "game",
+        "joke",
+        "gift",
+        "cook",
+        "sing",
+        "tea",
+        "walk",
+        "mum",
+        "dad",
+        "pie",
+        "lake",
+        "shop",
+        "team",
+    ]
+    cons, vow = "bcdfghjklmnprstvwz", "aeiou"
+    seen, rows = set(), []
+    while len(rows) < n:
+        ans = "".join(rnd.choice(cons) + rnd.choice(vow) for _ in range(rnd.randint(2, 4))) + rnd.choice(
+            ["", "n", "s", "t"]
+        )
+        if ans in seen:
+            continue
+        seen.add(ans)
+        rows.append((" ".join(rnd.choice(vocab) for _ in range(rnd.randint(4, 9))), ans))
+    return rows
+
+
+def test_a_bigger_poster_never_fits_worse_than_a_smaller_one(tmp_path):
+    """210 realistic clues (24x36 took such a list, 36x48 refused it): the per-size minimums are only preferences, so a bigger size only ever gets roomier."""
+    out = tmp_path / "out"
+    path = write_csv(tmp_path / "x.csv", _realistic_rows(210))
+    args = ["--no-key", "--no-solution", "--no-actual-size", "--no-verify", "--no-crops", "--attempts", "100"]
+    code = cli.main(["build", "--clues", str(path), "--size", "24x36,36x48", "--out", str(out), *args])
+    assert code == 0  # before the fix, 36x48 refused a list that 24x36 took
+    fits = {s: json.loads((out / "details" / s / "fit.json").read_text())["fit"] for s in ("24x36", "36x48")}
+    # the smallest size may or may not hold this list; where it does, it must not beat the bigger ones
+    small = tmp_path / "small"
+    if (
+        cli.main(
+            [
+                "render",
+                str(out / "details" / "grid.json"),
+                "--trim",
+                "18x24",
+                "--outroot",
+                str(small),
+                "--make",
+                "C",
+                "--quiet",
+            ]
+        )
+        == 0
+    ):
+        fits["18x24"] = json.loads((small / "18x24" / "fit.json").read_text())["fit"]
+    order = [fits[s] for s in ("18x24", "24x36", "36x48") if s in fits]
+    for a, b in zip(order, order[1:]):
+        assert a["cell"] <= b["cell"] and a["fs"] <= b["fs"]
+    assert all(f["cell"] >= 0.3 and f["fs"] >= 9.0 for f in order)  # never below the shared floor
+
+
+def test_the_shared_floor_applies_to_every_size_including_scaled_ones():
+    from crossword_poster.render_news import MIN_CLUE_PT, MIN_SQUARE_IN, size_config
+
+    for trim in ("11x17", "18x24", "24x36", "36x48", "48x72"):
+        cfg = size_config(trim)
+        assert cfg["fs_min"] >= MIN_CLUE_PT and cfg["cell_min"] >= MIN_SQUARE_IN

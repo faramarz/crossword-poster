@@ -95,7 +95,13 @@ clues on a big poster), `growText` raises the clue text in 0.25 pt steps, up to 
 blank is under 8% or the text stops fitting. `render_news.size_warnings` turns the result into build warnings (clue text
 under 9 pt, squares under 0.3 in, blank foot still 8% or more).
 
-**Limits.** `pool` skips clues over 300 characters and refuses more than 400 usable words (a safety limit; about 200 to 230 is the most that ever fits on one poster). The grid search runs in
+The per-size `fs_min` and `cell_min` in `SIZES` are only the *preferred* minimums. `fitAll` first fits with them; if
+nothing fits, it fits again with the shared floor (`MIN_CLUE_PT` 9 pt, `MIN_SQUARE_IN` 0.3 in, the same for every
+size), reports `belowPreferred` in `fit.json` and warns instead of failing. So a bigger poster never holds fewer clues
+than a smaller one, and its squares and text are never smaller. `size_config` raises any preferred minimum that is below
+the floor (scaled small sizes), so the floor is truly shared.
+
+**Limits.** `pool` skips clues over 300 characters and refuses more than 400 usable words (a safety limit; in tests about 300 clues fit on 24x36 at the legibility floor, and the grid search gets slow long before 400). The grid search runs in
 batches under a wall-clock budget (`--time-limit`, 180 s by default), logs progress every few seconds and, when the
 budget runs out, keeps the best layout found; results are unchanged whenever the budget is not reached.
 

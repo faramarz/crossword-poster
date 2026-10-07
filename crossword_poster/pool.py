@@ -41,7 +41,7 @@ ENUM_NAMES = ("enumeration", "enum")
 DEFAULT_MIN_LEN = 2
 DEFAULT_MAX_LEN = 20
 SPARSE_BELOW = 8
-CROWDED_ABOVE = 220
+CROWDED_ABOVE = 250
 MAX_WORDS = 400
 MAX_CLUE_LEN = 300
 MAX_ROW_WARNINGS = 10
@@ -288,7 +288,7 @@ def build_pool(
         warnings.append(f"Only {len(rows)} clues: the poster will look sparse. About 30 to 60 clues works best.")
     if len(rows) > CROWDED_ABOVE:
         warnings.append(
-            f"{len(rows)} clues is about the most one poster can hold (24x36 holds the most, around 200 to 230). "
+            f"{len(rows)} clues is a lot for one poster: expect small squares and text (use 24x36 or bigger). "
             "If the build says the clues do not fit, keep fewer or shorter ones."
         )
     report = dict(
