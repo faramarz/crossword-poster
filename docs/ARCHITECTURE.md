@@ -39,6 +39,7 @@ A previous `details/` folder is removed first so stale styles never get verified
 | `pdfutil.py` | PDF toolbox on pypdf and pypdfium2 (sizes, text, fonts, a small content-stream interpreter, rasterising) |
 | `common.py` | bundled fonts as data URIs, Chromium discovery/launch, PDF printing, size parsing |
 | `doctor.py` | `crossword-poster doctor` |
+| `__main__.py` | lets `python -m crossword_poster` run the same command line as the `crossword-poster` script |
 | `errors.py` | `UserError` (exit 2), `EnvironmentProblem` (3), `IncompleteGrid` (1) |
 | `transpose.py` | swap rows and columns of a grid.json |
 | `fonts/`, `samples/` | package data (OFL fonts, bundled sample CSV) |
@@ -61,8 +62,8 @@ letter count (`auto_bounds`: area = letters / 0.4 x 1.3) and enlarged by 15% per
 
 `solve` adds the graceful degradation: words that share no letter with any other word are left out up front; then
 `attempts` layouts in the estimated window with growth; then three times the attempts in a larger window; finally the
-best partial layout (`generate`, scored `words*100 + 40*density + 10*crossings/word`). Everything is deterministic: no
-wall-clock limits are used.
+best partial layout (`generate`, scored `words*100 + 40*density + 10*crossings/word`). Results are deterministic for a given input and seed, unless the `--time-limit`
+budget (180 s by default) runs out.
 
 ## Layout and the fit loop
 
@@ -130,7 +131,7 @@ the sample at that size and read the squares and font size from the summary, the
 
 **Style.** Styles are variants in `render_news.render_size` (letter `A`, `B`, `C` with a folder name and a fill colour).
 Add a variant tuple there, a folder name in `pipeline.FOLDERS`, a name in `pipeline.STYLES`/`names`, an entry in
-`verify.VARIANTS` and `crops.VARIANTS`, and (if it uses new colours) allow them in `verify._check_poster`. Artwork such
+`verify.VARIANTS` and `crops.VARIANTS`, and (if it uses new colours) allow them in `verify._check_colours`. Artwork such
 as the cake and hat lives in `pick_icons` / `icon()` in the page script.
 
 **Font.** See `crossword_poster/fonts/README.md`.

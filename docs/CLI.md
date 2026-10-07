@@ -156,23 +156,24 @@ The printed length is added at the end of each clue.
   a different length, add an `enumeration` column (for example `6`).
 - If the clue already ends with a length such as `(5,3)` and the total is right, it is kept as you wrote it. If the
   total is wrong, the tool corrects it and prints a warning.
-- Single-word lengths are added when the poster is drawn. So `clues_and_answers.csv` shows your clue, and the poster
-  shows your clue plus the length.
+- The poster and `clues_and_answers.csv` show the same clue text, with the length at the end of every clue (single
+  words included), so you can proofread the file and know it matches the poster.
 
 ### Duplicates, giveaways and warnings
 
 - **Duplicates.** If two rows have the same grid word, the first is kept and the others are ignored, with a warning.
   The comparison is on the letters only, so `Big Ben` and `BIG-BEN` count as the same answer.
 - **Giveaways.** A clue that contains an answer as a whole word (or a whole phrase, for multi-word answers), including
-  its own answer, is reported as a possible giveaway. The build prints the count. The list is in
-  `<out>/details/pool_report.json`. It is a warning only.
+  its own answer, is reported as a possible giveaway. The build lists them by row number (the full list is in
+  `<out>/details/pool_report.json`). It is a warning only.
 - **Few or many clues.** Fewer than 2 usable clues is an error. Fewer than 8 gives a "will look sparse" warning. More
   than 120 gives a "type will be small" warning. More than 400 usable clues is an error: split the file, or keep the best.
 - **Long clues.** A clue longer than 300 characters is skipped, with its length shown, because it cannot be laid out
   legibly. Shorten it.
-- **Swapped columns.** If most "answers" are sentences of four or more words and longer than their "clues", the tool
-  warns that the two columns look swapped and prints the `--clue-column` and `--answer-column` options that fix it. (If
-  every row was rejected because of this, the same advice is in the error message.)
+- **Swapped columns.** If most "answers" are three or more words and longer than their "clues", the tool warns that the
+  two columns look swapped and prints the `--clue-column` and `--answer-column` options that fix it. (If every row was
+  rejected because of this, the same advice is in the error message.) Otherwise, a single row whose answer is three or
+  more words and whose clue is one word gets its own warning by row number (at most 10 are shown).
 - **Clue text is printed literally.** Characters such as `<`, `>` and `&` appear exactly as typed and cannot change the
   poster's layout. Runs of spaces and line breaks inside a clue become one space.
 
@@ -430,6 +431,19 @@ shown here is only an example. On Windows PowerShell, put `& ` in front of the q
 Downloads Chromium once, with Playwright's installer, using the same Python that runs `crossword-poster`. It works
 however the tool was installed (pip, pipx, uv). It prints the command it runs, runs it, then checks that Chromium starts.
 Exit code 0 on success and 3 if the download or the check fails.
+
+```text
+usage: crossword-poster install-browser [-h] [--with-deps]
+
+Download the Chromium browser that prints the poster (a download of about 300 MB, one time). It
+runs `python -m playwright install chromium` with the same Python that runs crossword-poster, so
+it also works when crossword-poster was installed with pipx, uv or in a virtual environment.
+
+options:
+  -h, --help   show this help message and exit
+  --with-deps  also install the system libraries Chromium needs (Linux only; may ask for your
+               password)
+```
 
 ```bash
 crossword-poster install-browser               # macOS, Windows, Linux with the libraries already present

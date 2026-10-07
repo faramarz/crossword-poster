@@ -44,6 +44,9 @@ The first public release.
   Only real bugs produce a traceback.
 - **Single-stage commands** for power users: `pool`, `generate`, `validate`, `render`, `verify`, `actual-size`, `crops`
   and `transpose`.
+- **Project tooling.** CI on Python 3.9 to 3.14 with a package build and `twine check`, a macOS and Windows sample build,
+  a release workflow that attaches the sdist and wheel to a GitHub Release with the notes from this file, and a test
+  that keeps `docs/CLI.md` identical to `--help` (`python scripts/sync_cli_docs.py` regenerates it).
 - **Documentation:** a beginner guide, a command line reference, a troubleshooting FAQ and an architecture overview.
 - **Tests and CI.** A pytest suite with unit and end-to-end tests (real Chromium). GitHub Actions run lint, unit tests on
   Python 3.9 to 3.13, end-to-end tests, and smoke tests on macOS and Windows. Dependabot keeps dependencies current.

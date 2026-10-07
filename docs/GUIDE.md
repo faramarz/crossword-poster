@@ -68,29 +68,27 @@ and the print shop.
 ### How many clues fit each poster size?
 
 Short answer: **30 to 60 clues is a good range for most posters.** More clues make smaller squares. Fewer clues make
-bigger squares and leave empty space at the bottom of the poster.
+bigger squares, and when there are very few the tool makes the clue text bigger so the poster does not look empty.
 
-I measured this by building the same clue lists at three sizes, with the default `grey` style. The clues were typical
-trivia and personal clues from the sample files, about 4 to 12 words each. Every build placed every answer. Your numbers
-will differ a little with your own clue lengths and answers.
+I measured this with version 1.0.0 by building made-up clue lists of 20 to 200 clues at three sizes, with the default
+`grey` style. The clues averaged 8.5 words and the answers 7.7 letters, which is typical for the sample files. Your
+numbers will differ a little with your own clue lengths and answers.
 
-**Square size in inches (clue text size in points)**
+**Square size in inches and millimetres (clue text size in points)**
 
-| Clues | Grid size (squares) | 18 x 24 in | 24 x 36 in | 36 x 48 in |
+| Clues | Grid (squares) | 18 x 24 in | 24 x 36 in | 36 x 48 in |
 |---:|---|---|---|---|
-| 20 | 16 x 16 | 1.06 in (14 pt) | 1.43 in (18 pt) | 2.15 in (27 pt) |
-| 30 | 20 x 19 | 0.85 in (14 pt) | 1.15 in (18 pt) | 1.72 in (27 pt) |
-| 40 | 22 x 23 | 0.77 in (14 pt) | 1.04 in (18 pt) | 1.56 in (27 pt) |
-| 55 | 26 x 26 | 0.65 in (14 pt) | 0.88 in (18 pt) | 1.32 in (27 pt) |
-| 70 | 30 x 30 | 0.56 in (13.2 pt) | 0.76 in (18 pt) | 1.15 in (26.8 pt) |
-| 85 | 33 x 33 | 0.51 in (11.9 pt) | 0.69 in (18 pt) | 1.04 in (24.5 pt) |
-| 99 | 37 x 35 | 0.46 in (12.2 pt) | 0.62 in (18 pt) | 0.93 in (25 pt) |
+| 20 | 18 x 17 | 0.94 in, 24 mm (17.0 pt) | 1.27 in, 32 mm (27.0 pt) | 1.91 in, 49 mm (34.8 pt) |
+| 40 | 24 x 25 | 0.71 in, 18 mm (13.3 pt) | 0.95 in, 24 mm (19.8 pt) | 1.43 in, 36 mm (27.0 pt) |
+| 55 | 30 x 29 | 0.56 in, 14 mm (13.3 pt) | 0.76 in, 19 mm (18.8 pt) | 1.15 in, 29 mm (27.0 pt) |
+| 70 | 33 x 31 | 0.51 in, 13 mm (12.6 pt) | 0.69 in, 18 mm (18.0 pt) | 1.04 in, 26 mm (25.8 pt) |
+| 100 | 39 x 38 | 0.43 in, 11 mm (10.0 pt) | 0.59 in, 15 mm (17.5 pt) | 0.88 in, 22 mm (20.4 pt) |
+| 150 | 48 x 47 | 0.35 in, 9 mm (8.1 pt, **warns**) | 0.48 in, 12 mm (14.3 pt) | 0.72 in, 18 mm (16.6 pt) |
+| 200 | 55 x 55 | does not fit | does not fit | does not fit |
 
-One inch is 2.54 cm. A square of 0.6 in is about 15 mm.
-
-The clue sizes in this table were measured before the tool learned to enlarge the clue text on posters that would
-otherwise have a blank foot. Square sizes are unchanged. The rows with few clues now print larger text than shown (for
-example 20 clues on 24 x 36 come out at 27 pt rather than 18 pt).
+One inch is 25.4 mm. A square of 0.6 in is about 15 mm. "Does not fit" means the build stops with a message: there is
+no size where 200 clues fit at a readable size, so keep the best ones. In this run the 20 clue poster on 24 x 36 still
+had 13 percent of its height empty, which the build reports as a warning.
 
 How to read this table:
 
@@ -102,19 +100,18 @@ How to read this table:
   on 24 x 36, or 27 pt on 36 x 48. The build warns if the text comes out under 9 pt or the squares under 0.3 in.
 - **Empty space.** When you have few clues, the grid gets big squares and the clue text reaches its normal upper limit.
   If that would leave 8 percent or more of the height empty at the bottom, the tool makes the clue text bigger (up to
-  1.5 times the normal limit) until the page is filled. In my builds, 20 clues on 24 x 36 grow from 18 pt to 27 pt and
-  leave about 6 percent empty, and 10 clues on 24 x 36 still leave about 17 percent, which the build reports as a
-  warning. If you do not like that, pick a smaller poster or add clues.
-- **Too many clues.** The tool warns above 120 clues and refuses more than 400. I tested up to 99. At 99 clues on
-  18 x 24, squares are 0.46 in: small, but possible. A clue longer than 300 characters is skipped: shorten it.
+  1.5 times the normal limit, which is why the first rows show 27 pt and 34.8 pt) until the page is filled. If a poster
+  is still 8 percent or more empty, the build says so. Then pick a smaller poster or add clues.
+- **Too many clues.** The tool warns above 120 clues and refuses more than 400, but in practice about 150 is the most
+  that fits on the biggest tuned size. A clue longer than 300 characters is skipped: shorten it.
 
 **Good starting points**
 
 | Poster | Inches | Centimetres | Good for |
 |---|---|---|---|
-| 18 x 24 | 18 x 24 | 46 x 61 | 30 to 55 clues. Fits a smaller wall or a table. Cheapest. |
-| 24 x 36 | 24 x 36 | 61 x 91 | 40 to 85 clues. The classic "movie poster" size. Best all-round choice. |
-| 36 x 48 | 36 x 48 | 91 x 122 | 55 clues or more. Big enough for a crowd. Costs more and needs a large wall. |
+| 18 x 24 | 18 x 24 | 46 x 61 | 30 to 70 clues. Fits a smaller wall or a table. Cheapest. |
+| 24 x 36 | 24 x 36 | 61 x 91 | 40 to 100 clues. The classic "movie poster" size. Best all-round choice. |
+| 36 x 48 | 36 x 48 | 91 x 122 | 70 to 150 clues. Big enough for a crowd. Costs more and needs a large wall. |
 
 Outside North America you may prefer A sizes. A2 is `16.54x23.39` and A1 is `23.39x33.11` (in inches). Both work. See
 the [FAQ](TROUBLESHOOTING.md#can-i-use-a2-a1-or-another-size).
@@ -262,13 +259,13 @@ Here is what shows up in real clue collections, and what to do about each.
 
 | Problem | Example | What the tool does | What you should do |
 |---|---|---|---|
-| **The answer is in the clue box** (and the clue is in the answer box). Some people do it backwards. | Clue: `Paris`, Answer: `Capital of France` | **Nothing. It cannot tell.** It would put `CAPITALOFFRANCE` in the grid. | Scan the answer column. Anything long, with a question mark, or like a sentence is probably a clue. Swap the cells. Sorting the sheet by the answer column makes these easy to spot. |
+| **The answer is in the clue box** (and the clue is in the answer box). Some people do it backwards. | Clue: `Paris`, Answer: `Capital of France` | **It cannot be sure, but it warns.** It warns when most rows look backwards, and names single rows whose answer is three or more words and whose clue is one word ("Row 7: the clue is just 'Paris' but the answer is 'Capital of France'"). Anything it misses would put `CAPITALOFFRANCE` in the grid. | Scan the answer column. Anything long, with a question mark, or like a sentence is probably a clue. Swap the cells. Sorting the sheet by the answer column makes these easy to spot. |
 | **Duplicates** | Two people both send `Pineapple` | Keeps the first row and ignores the others, with a warning. | Read both clues and keep the better one. Put it first, or delete the other row. |
 | **Near-duplicates** | `Biscuit` and `Biscuits` | Not detected. Both go in. | Look through the sorted answers and remove one. |
 | **Answers with numbers** | `1976` or `50th` | **Skipped**, with an explanation. Answers must be letters. | Spell it out (`Nineteen seventy six`), or change the clue so the answer is a word. |
 | **Very long answers** | A 34-letter word | Skipped above 20 letters. | Shorten the answer or change the clue. Answers of 4 to 10 letters fit best. |
 | **Very short answers** | `Ö` | Skipped below 2 letters. | Use a longer answer. |
-| **A clue that gives away an answer** | Clue: `Café in Rome` and Answer: `Café` | Flags clues that contain an answer as a whole word, and tells you how many. The list is in `details/pool_report.json` after a build. | Reword the clue so it does not contain its own answer or another answer on the poster. |
+| **A clue that gives away an answer** | Clue: `Café in Rome` and Answer: `Café` | Flags clues that contain an answer as a whole word and lists them by row number in the build output (the full list is in `details/pool_report.json`). | Reword the clue so it does not contain its own answer or another answer on the poster. |
 | **Inside jokes only one person gets** | `The thing Jo said at the 2009 barbecue` | Nothing. | Add a hint (`...at the barbecue, involving a goat`) or cut it. A few mysteries are fun. A poster full of them is not. |
 | **Facts that might be wrong** | `Year the band split`, a person's name spelling | Nothing. It does not check facts. | Look up dates and spellings. Ask the clue's author if unsure. A wrong clue on a poster is a bad surprise. |
 | **Clues with the wrong length** | `Dog (5)` but the answer has 7 letters | Corrects the number and warns. | Nothing, but fix the clue if the number was part of a joke. |
@@ -367,7 +364,7 @@ No Git? Use this one instead:
 pip install https://github.com/faramarz/crossword-poster/archive/refs/heads/main.zip
 ```
 
-**6. Install Chromium** (a download of a few hundred megabytes):
+**6. Install Chromium** (a download of about 300 MB):
 
 ```bash
 crossword-poster install-browser
@@ -436,7 +433,7 @@ You should see `(.venv)` at the start of the line. Run the second line again eve
 pip install https://github.com/faramarz/crossword-poster/archive/refs/heads/main.zip
 ```
 
-**7. Install Chromium** (a download of a few hundred megabytes):
+**7. Install Chromium** (a download of about 300 MB):
 
 ```bat
 crossword-poster install-browser
@@ -569,10 +566,32 @@ It takes from 10 seconds to a couple of minutes, depending on how many clues you
 
 ### Read the summary
 
-A build ends like this (this is the real output of `crossword-poster sample`; the folder path will be yours):
+This is the complete output of `crossword-poster sample --out my-first-poster`, copied as it was printed. Only the folder
+name in the "Your files are in" line is changed to an example, and the times will be different on your computer. Your own
+build prints the same six steps and the same summary:
 
 ```text
-Done in 12s. Your files are in: /home/you/crossword/my-first-poster
+Building the sample poster. The clues file it uses was copied to my-first-poster/sample_birthday.csv so you can see the format.
+
+[1/6] Reading your clues
+  54 usable clues from 54 rows
+
+[2/6] Building the crossword grid (54 answers; this can take a minute for big lists)
+  window 35x34: 803 complete layouts in 1000 attempts
+  54 words in a 27 x 27 grid (seed 1, 3.54s)
+
+[3/6] Checking the grid
+  grid is valid: every word crosses, every clue matches
+
+[4/6] Printing the poster(s) with Chromium: 18x24 (grey)
+  18x24: squares 0.627 in, clue text 14.0 pt
+
+[5/6] Making the answer sheet and the actual-size check page
+
+[6/6] Checking the finished files
+All 21 output checks passed.
+
+Done in 8s. Your files are in: /home/you/crossword/my-first-poster
 
   poster_18x24_grey_bleed.pdf    PRINT THIS: 18.25 x 24.25 in, with 0.125 in bleed
   poster_18x24_grey_trim.pdf     18 x 24 in, no bleed (for printers that add their own)
@@ -616,6 +635,10 @@ Use `--size WIDTHxHEIGHT` in inches. 18x24, 24x36 and 36x48 are the sizes the la
 | `black` | White squares on solid black blocks. | You want a bold, dramatic poster that reads from across the room. Large black areas can print streaky on some printers, so ask the shop for a test. |
 | `icons` | Black blocks with a cake and party hat drawn in. Add `--spot-text 50` to reverse a number out of a big black area. | It is a birthday and you want it playful. |
 | `all` | All three. | You want to compare before you decide. |
+
+![The black style at 18 by 24 inches: white squares on solid black blocks](sample_18x24_black.png)
+
+*The `black` style at 18 x 24.*
 
 ![The icons style: black blocks with a cake and a party hat, and a big 50 in the top left](style_icons_18x24.png)
 

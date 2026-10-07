@@ -6,11 +6,14 @@
 
 [![CI](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml/badge.svg)](https://github.com/faramarz/crossword-poster/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
-[![Python 3.9 to 3.13](https://img.shields.io/badge/python-3.9%20to%203.13-blue.svg)](pyproject.toml)
+[![Python 3.9 to 3.14](https://img.shields.io/badge/python-3.9%20to%203.14-blue.svg)](pyproject.toml)
 
-<img src="docs/sample_24x36_grey.png" alt="A sample 24 by 36 inch crossword poster with grey blocks, a bold title and four columns of clues under the grid" width="520">
-
-<img src="docs/sample_solution.png" alt="The matching answer sheet: the same grid with every answer filled in" width="340">
+<table>
+<tr>
+<td align="center"><img src="docs/sample_24x36_grey.png" alt="A sample 24 by 36 inch crossword poster with grey blocks, a bold title and four columns of clues under the grid" width="400"></td>
+<td align="center"><img src="docs/sample_solution.png" alt="The matching answer sheet: the same grid with every answer filled in" width="300"></td>
+</tr>
+</table>
 
 *A fictional sample ("Alex's 50th"), built from [`examples/sample_birthday.csv`](examples/sample_birthday.csv). Left to right: the poster, then its answer sheet.*
 
@@ -47,8 +50,10 @@ Give it a spreadsheet with a **clue** column and an **answer** column. It writes
 
 ## Quick start
 
-You need Python 3.9 or newer. New to the terminal? Follow the [beginner guide](docs/GUIDE.md#4-install-the-tool) instead,
-which has exact steps for macOS, Windows and Linux.
+**Never used a terminal?** Follow the [beginner guide](docs/GUIDE.md#4-install-the-tool) instead. It has exact steps for
+macOS, Windows and Linux.
+
+You need Python 3.9 or newer (see [Python versions](#python-versions) below).
 
 **1. Install** (an isolated install with [pipx](https://pipx.pypa.io/) or [uv](https://docs.astral.sh/uv/)):
 
@@ -67,8 +72,12 @@ No Git on your computer? Replace `git+https://github.com/faramarz/crossword-post
 `https://github.com/faramarz/crossword-poster/archive/refs/heads/main.zip`.
 
 `install-browser` downloads Chromium, the browser the tool uses to lay out and print the poster. You do it once. It is a
-download of a few hundred megabytes. It runs Playwright's installer with the same Python as the tool, so it works for
+download of about 300 MB. It runs Playwright's installer with the same Python as the tool, so it works for
 pipx, uv and pip alike. If it ever fails, `crossword-poster doctor` prints the manual command as a fallback.
+
+If your computer says `command not found` for `crossword-poster` after installing, the folder that pipx or uv installs
+programs into is not on your PATH yet. Run `pipx ensurepath` (pipx) or `uv tool update-shell` (uv), then open a new
+terminal window.
 
 <details>
 <summary>Plain pip in a virtual environment instead</summary>
@@ -91,15 +100,21 @@ crossword-poster doctor
 **2. See what it makes.** This builds the fictional sample in about 15 seconds:
 
 ```bash
-crossword-poster sample --out my-first-poster
+crossword-poster sample --out my-first-poster --size 24x36
 ```
 
 **3. Make your own.**
 
+First write a starter file, then open it in Excel or Google Sheets and replace the example rows with your clues:
+
 ```bash
-crossword-poster template my_clues.csv        # a starter file; open it in Excel or Google Sheets
-crossword-poster build --clues my_clues.csv --title "Sam's 50th Birthday" \
-    --subtitle "Clues from everyone who loves you" --size 24x36 --style grey --out poster/
+crossword-poster template my_clues.csv
+```
+
+Then build the poster (this is one long line; paste it as it is):
+
+```bash
+crossword-poster build --clues my_clues.csv --title "Sam's 50th Birthday" --subtitle "Clues from everyone who loves you" --size 24x36 --style grey --out poster/
 ```
 
 The run ends with a plain-language summary: the files written, the size of each square, the clue type size, and any
@@ -116,7 +131,14 @@ answers that did not fit.
 - **Checks you do not have to do by hand.** An independent validator re-derives the grid from its letters. A verifier checks page sizes, embedded fonts, colours, margins and that every clue appears exactly once.
 - **Friendly errors.** Mistakes in your file or setup get a plain message and a "how to fix" line, not a traceback.
 - **Private and offline.** Everything runs on your computer. Nothing is uploaded.
-- **Open and tested.** MIT licence, bundled open fonts, unit tests, end-to-end tests with real Chromium, CI on Linux, macOS and Windows.
+- **Open and tested.** MIT licence, bundled open fonts, unit tests on Python 3.9 to 3.14, end-to-end tests with real Chromium on Linux, and a real sample build on macOS and Windows in CI.
+
+## Python versions
+
+| Python | Status |
+|---|---|
+| 3.10 to 3.14 | Supported and tested in CI. |
+| 3.9 | Still works and is tested, but Python 3.9 reached end of life in October 2025. It may be dropped in a future release. Prefer a newer Python if you can. |
 
 ## How it works
 

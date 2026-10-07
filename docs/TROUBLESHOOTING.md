@@ -122,8 +122,8 @@ newer Python from [python.org/downloads](https://www.python.org/downloads/).
 
 ## Windows problems
 
-The project's automated tests build a full poster with Chromium on Linux. On Windows and macOS they run `doctor` and
-the unit tests. If you hit a Windows-only problem that is not listed here, please
+The project's automated tests run the full test suite with Chromium on Linux. On Windows and macOS they run `doctor`, the
+unit tests and a real build of the sample poster. If you hit a Windows-only problem that is not listed here, please
 [open an issue](https://github.com/faramarz/crossword-poster/issues/new/choose).
 
 ### `'py' is not recognized`, or typing `python` opens the Microsoft Store
@@ -259,14 +259,16 @@ finish your answers first, then proofread the final poster. If you like a layout
 
 ### How long does it take?
 
-The sample (54 clues) builds in about 12 seconds on a modest two-core computer. A list of 99 clues took around a minute
-for one size. Bigger lists take longer to search. Building several sizes or styles takes longer. To go faster, add
-`--no-verify`, or `--no-crops` which skips only the slowest check.
+The sample (54 clues) builds in about 10 seconds on a two-core computer. In my tests a list of 100 clues took about 25
+seconds and 150 clues about 45 seconds, each for three sizes at once with `--no-verify`. The search for the grid is the
+slow part and grows quickly with the number of clues. While it runs, a "still searching" line appears every few seconds,
+and it stops after 180 seconds (`--time-limit`), using the best layout found. Building several sizes or styles takes
+longer. To go faster, add `--no-verify`, or `--no-crops` which skips only the slowest check.
 
 ### "The clues do not fit on a ... poster at a readable size"
 
-The layout code could not fit all the clues on the poster. The message ends with the fix: choose a bigger `--size`, or use
-fewer or shorter clues, then build again. The build exits with code 2 and writes no poster. This is rare. A more common
+The layout code could not fit all the clues on the poster. The message ends with the fix: choose a bigger `--size` (for
+36x48 and bigger, use fewer or shorter clues instead: about 150 is the most that fits), then build again. The build exits with code 2 and writes no poster. This is rare. A more common
 case is that the poster is built but the type is very small, so always read the `clue text is ... pt` line in the summary.
 
 ### "Output checks: SOME FAILED"

@@ -30,7 +30,7 @@ cd crossword-poster
 python3 -m venv .venv
 source .venv/bin/activate              # Windows (Command Prompt): .venv\Scripts\activate
 pip install -e ".[dev]"
-crossword-poster install-browser  # one-time download; needed for the end-to-end tests
+crossword-poster install-browser       # one-time download; needed for the end-to-end tests
 crossword-poster doctor                # should end with "Everything is ready."
 ```
 
@@ -49,7 +49,8 @@ pytest                       # everything
 ```
 
 The end-to-end tests skip themselves when Chromium cannot start. CI runs them on Linux. On macOS and Windows, CI runs
-`doctor` and the unit tests. The unit tests run on Python 3.9, 3.10, 3.11, 3.12 and 3.13.
+`doctor`, the unit tests and a real build of the sample poster. The unit tests run on Python 3.9 to 3.14. Another CI job
+builds the wheel and sdist, checks them with `twine check`, and runs the unit tests from the sdist.
 
 Try your change by hand as well:
 
@@ -83,8 +84,9 @@ the checks. Read it before a larger change.
 - Output must stay deterministic: the same clues and seed give the same grid.
 - Add or update tests for every behaviour change. Put browser-free tests in the normal suite and mark tests that need
   Chromium with `@pytest.mark.e2e`.
-- Keep the documentation in step with the code. If you change a command line option, update `docs/CLI.md` (its help text
-  is copied from `--help`) and any other page that mentions it.
+- Keep the documentation in step with the code. If you change a command line option, run
+  `python scripts/sync_cli_docs.py` (it copies the `--help` text into `docs/CLI.md`; a test checks that) and update any
+  other page that mentions it.
 - Write in plain language in anything a user reads: short sentences, no jargon without a one-line explanation.
 
 ## Commits and pull requests
@@ -125,5 +127,8 @@ Some ideas, from small to larger:
 
 1. Update the version in `crossword_poster/__init__.py` and move the `[Unreleased]` notes in `CHANGELOG.md` under the new
    version and date.
-2. Run the full checks, then build the package with `python -m build`.
-3. Tag the commit `vX.Y.Z` and create a GitHub release with the changelog notes.
+2. Run the full checks. If a poster's look changed, regenerate the images with `scripts/build_sample.sh` and look at them.
+   If a command's options changed, run `python scripts/sync_cli_docs.py` (a test fails when `docs/CLI.md` is out of date).
+3. Commit, then tag the commit `vX.Y.Z` and push the tag. The `Release` workflow builds the sdist and wheel and creates
+   the GitHub Release with the notes from `CHANGELOG.md` (preview them with `python scripts/release_notes.py X.Y.Z`).
+   Nothing is uploaded to PyPI.
