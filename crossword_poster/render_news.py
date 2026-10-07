@@ -364,6 +364,10 @@ function fixIcons(svg){
 
 /* ---------- measuring + the column pour ---------- */
 const mcache={};
+/* While fitting, every column must keep POUR_MARGIN px spare. The fit is measured on one page and applied on others
+   (answer key, bleed, spot art); sub-pixel differences between those pages must not tip a plan that fitted exactly. */
+const POUR_MARGIN=3;
+let pourTol=0.01;
 function measure(wcPx,fs,lh){
   lh=lh||1.07;
   const key=wcPx+'|'+fs+'|'+lh;
@@ -387,7 +391,7 @@ function pour(hs,fs,cols,lh){
       const first=placed[ci].length===0;
       const prev=first?null:items[placed[ci][placed[ci].length-1].i];
       const gap=first?0:(head?g.beforeHead:(prev.head?g.afterHead:g.c));
-      if(used[ci]+gap+need<=cols[ci].cap+0.01){
+      if(used[ci]+gap+need<=cols[ci].cap+pourTol){
         placed[ci].push({i,gap,h:hs[i]});used[ci]+=gap+hs[i];break;
       }
       ci++;
@@ -494,6 +498,10 @@ function fitPass(){
 }
 /* the per-size minimums are PREFERRED: when they cannot be met, go on down to the shared legibility floor */
 function fitAll(){
+  pourTol=-POUR_MARGIN;
+  try{return fitAll_();}finally{pourTol=0.01;}
+}
+function fitAll_(){
   FSMIN=D.fsMin;CELLMIN=D.cellMin;
   const r=fitPass();
   if(r.ok||(D.fsFloor>=D.fsMin&&D.cellFloor>=D.cellMin))return Object.assign(r,{belowPreferred:false,prefFs:D.fsMin,prefCell:D.cellMin});
@@ -508,8 +516,14 @@ function applyPlan(F){
   const hd=buildHeader(F.frac,F.T);
   const yG=hd.h+Gpx,P=planGeom(F.kT,F.m,yG,hd.h);
   const g=drawGrid(P.cell,yG,P.Wg);
-  const hs=measure(P.wc,F.fs,F.lh);
-  const res=balance(P,hs,F.fs,F.lh).res;
+  let hs=measure(P.wc,F.fs,F.lh),res=balance(P,hs,F.fs,F.lh).res,eased=false;
+  /* last resort, should the safety margin ever be used up: ease the line spacing, then the text, a hair at a time */
+  while(!res.ok&&(F.lh>1.07||F.fs>Math.min(D.fsFloor,D.fsMin))){
+    F=Object.assign({},F);eased=true;
+    if(F.lh>1.07)F.lh=Math.max(1.07,Math.round((F.lh-0.005)*1000)/1000);
+    else F.fs=Math.round((F.fs-0.05)*100)/100;
+    hs=measure(P.wc,F.fs,F.lh);res=balance(P,hs,F.fs,F.lh).res;
+  }
   if(!res.ok)throw new Error('plan no longer pours (non-monotone fit)');
   const cl=$('clues');cl.innerHTML='';
   const gp=gaps(F.fs,F.lh);
@@ -536,7 +550,7 @@ function applyPlan(F){
     cl.appendChild(div);
   });
   const mm=$('meas');if(mm)mm.remove();
-  return{P,res,slackInfo};
+  return{P,res,slackInfo,eased,fs:F.fs,lh:F.lh};
 }
 
 /* ---------- verification ---------- */
@@ -844,6 +858,11 @@ def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderO
         pg.evaluate("f=>{window.__plan=applyPlan(f);}", fit)
         ver = pg.evaluate("f=>verify(f)", fit)
         slack = pg.evaluate("window.__plan.slackInfo")
+        eased = pg.evaluate("[window.__plan.eased, window.__plan.fs, window.__plan.lh]")
+        if eased[0]:
+            log(
+                f"  note: {trim} {tag}: text eased to {eased[1]:.2f} pt, line height {eased[2]:.3f}, so every clue fits"
+            )
         return pg, ver, slack
 
     vers = {}
