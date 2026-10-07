@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Games/Entertainment :: Puzzle Games",
     "Topic :: Printing",
 ]
@@ -38,8 +39,9 @@ dependencies = [
 xlsx = ["openpyxl>=3.1", "defusedxml>=0.7"]
 dev = [
     "pytest>=7.4",
-    "ruff>=0.6",
+    "ruff>=0.16,<0.17",
     "build>=1.0",
+    "twine>=5.0",
     "openpyxl>=3.1",
     "pyyaml>=6.0",
 ]
@@ -48,6 +50,8 @@ dev = [
 Homepage = "https://github.com/faramarz/crossword-poster"
 Repository = "https://github.com/faramarz/crossword-poster"
 Issues = "https://github.com/faramarz/crossword-poster/issues"
+Changelog = "https://github.com/faramarz/crossword-poster/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/faramarz/crossword-poster/blob/main/docs/GUIDE.md"
 
 [project.scripts]
 crossword-poster = "crossword_poster.cli:main"
@@ -65,9 +69,15 @@ include = [
     "/examples",
     "/docs",
     "/scripts",
+    "/.github",
     "/LICENSE",
     "/THIRD_PARTY_LICENSES.md",
     "/README.md",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/CODE_OF_CONDUCT.md",
+    "/SECURITY.md",
+    "/SUPPORT.md",
 ]
 
 [tool.pytest.ini_options]

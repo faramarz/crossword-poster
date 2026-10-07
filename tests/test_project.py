@@ -19,9 +19,9 @@ def load(path):
 
 def test_ci_workflow_is_valid_and_complete():
     ci = load(".github/workflows/ci.yml")
-    assert set(ci["jobs"]) == {"lint", "test", "e2e", "smoke"}
+    assert set(ci["jobs"]) == {"lint", "test", "e2e", "smoke", "package"}
     matrix = ci["jobs"]["test"]["strategy"]["matrix"]["python-version"]
-    assert matrix == ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    assert matrix == ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     assert set(ci["jobs"]["smoke"]["strategy"]["matrix"]["os"]) == {"macos-latest", "windows-latest"}
     commands = " ".join(str(s.get("run", "")) for s in ci["jobs"]["e2e"]["steps"])
     assert "crossword-poster install-browser --with-deps" in commands
