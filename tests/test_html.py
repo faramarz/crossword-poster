@@ -138,10 +138,13 @@ def test_size_warnings_for_tiny_text_tiny_squares_and_a_blank_foot():
     assert len(size_warnings("18x24", dict(fs=8, cell=0.2, blankFrac=0.5))) == 3
 
 
-def test_the_no_fit_hint_does_not_suggest_a_bigger_size_when_already_biggest():
+def test_the_no_fit_hint_points_at_24x36_and_never_a_bigger_size_for_big_lists():
     from crossword_poster.render_news import no_fit_error
 
-    assert "bigger --size" in no_fit_error("24x36").hint
+    small = no_fit_error("18x24")
+    assert "bigger --size" in small.hint and "24x36" in small.hint
+    mid = no_fit_error("24x36")
+    assert "bigger" not in mid.hint and "fewer or shorter clues" in mid.hint
     big = no_fit_error("36x48")
-    assert "bigger --size" not in big.hint and "fewer or shorter clues" in big.hint
+    assert "bigger" not in big.hint and "--size 24x36" in big.hint
     assert "36x48 poster" in big.message

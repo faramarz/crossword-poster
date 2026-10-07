@@ -757,10 +757,15 @@ def size_warnings(trim: str, fit: dict) -> list[str]:
 
 def no_fit_error(trim: str) -> UserError:
     """The error for clues that cannot be fitted at a readable size; the hint depends on how big the poster already is."""
-    if parse_size(trim)[0] >= 36:
-        hint = "use fewer or shorter clues (about 150 is the most a 36x48 poster holds)"
+    width = parse_size(trim)[0]
+    if width < 24:
+        hint = "use a bigger --size (24x36 holds the most clues), or fewer / shorter clues"
+    elif width < 36:
+        hint = (
+            "use fewer or shorter clues (24x36 already holds the most; about 200 typical clues is close to its limit)"
+        )
     else:
-        hint = "use a bigger --size (for example 36x48), or fewer / shorter clues"
+        hint = "try --size 24x36, which holds more clues than the larger sizes, or use fewer or shorter clues"
     return UserError(f"The clues do not fit on a {trim} poster at a readable size.", hint)
 
 

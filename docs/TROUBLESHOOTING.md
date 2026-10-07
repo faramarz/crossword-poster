@@ -244,7 +244,7 @@ a small poster. Fix it by:
 - shortening long clues (long clues need more lines);
 - checking with the [actual-size page](GUIDE.md#6-check-before-printing) rather than the screen.
 
-The [clue count table](GUIDE.md#how-many-clues-fit-each-poster-size) shows what to expect.
+The [clue count table](GUIDE.md#very-large-lists-about-150-clues-and-more) shows what to expect.
 
 ### There is a big empty space at the bottom of the poster
 
@@ -259,16 +259,19 @@ finish your answers first, then proofread the final poster. If you like a layout
 
 ### How long does it take?
 
-The sample (54 clues) builds in about 10 seconds on a two-core computer. In my tests a list of 100 clues took about 25
-seconds and 150 clues about 45 seconds, each for three sizes at once with `--no-verify`. The search for the grid is the
-slow part and grows quickly with the number of clues. While it runs, a "still searching" line appears every few seconds,
+The sample (54 clues) builds in about 10 seconds on a two-core computer. In my tests the grid search alone took about 11 seconds for 100
+clues, 27 seconds for 150, 45 seconds for 200 and 70 seconds for 250 (drawing and checking the poster adds some more).
+The search for the grid is the slow part and grows quickly with the number of clues. While it runs, a "still searching" line appears every few seconds,
 and it stops after 180 seconds (`--time-limit`), using the best layout found. Building several sizes or styles takes
 longer. To go faster, add `--no-verify`, or `--no-crops` which skips only the slowest check.
 
 ### "The clues do not fit on a ... poster at a readable size"
 
-The layout code could not fit all the clues on the poster. The message ends with the fix: choose a bigger `--size` (for
-36x48 and bigger, use fewer or shorter clues instead: about 150 is the most that fits), then build again. The build exits with code 2 and writes no poster. This is rare. A more common
+The layout code could not fit all the clues on the poster at a readable size. The message ends with the fix. On 18x24,
+choose `--size 24x36`. The 24x36 size holds the most clues (about 200 to 230 typical ones), because the bigger 36x48
+size also asks for bigger squares and bigger text, so it holds fewer. On 24x36 or bigger, use fewer or shorter clues
+instead. See [How many clues fit each poster size?](GUIDE.md#very-large-lists-about-150-clues-and-more). The build exits with
+code 2 and writes no poster. This is rare. A more common
 case is that the poster is built but the type is very small, so always read the `clue text is ... pt` line in the summary.
 
 ### "Output checks: SOME FAILED"
@@ -357,7 +360,7 @@ Only to install. After that the tool works offline.
 
 ### How many clues should I use?
 
-About 30 to 60 for a typical poster. See [the table](GUIDE.md#how-many-clues-fit-each-poster-size).
+About 30 to 60 for a typical poster. See [the table](GUIDE.md#very-large-lists-about-150-clues-and-more).
 
 ### Can I change the fonts, colours or title style?
 

@@ -95,7 +95,7 @@ clues on a big poster), `growText` raises the clue text in 0.25 pt steps, up to 
 blank is under 8% or the text stops fitting. `render_news.size_warnings` turns the result into build warnings (clue text
 under 9 pt, squares under 0.3 in, blank foot still 8% or more).
 
-**Limits.** `pool` skips clues over 300 characters and refuses more than 400 usable words. The grid search runs in
+**Limits.** `pool` skips clues over 300 characters and refuses more than 400 usable words (a safety limit; about 200 to 230 is the most that ever fits on one poster). The grid search runs in
 batches under a wall-clock budget (`--time-limit`, 180 s by default), logs progress every few seconds and, when the
 budget runs out, keeps the best layout found; results are unchanged whenever the budget is not reached.
 
