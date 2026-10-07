@@ -6,12 +6,14 @@ import argparse
 import contextlib
 import csv
 import os
+import subprocess
 import sys
 from importlib import import_module, resources
 from typing import Optional
 
 from . import __version__
-from .errors import UserError
+from .common import check_chromium, install_command, install_command_text
+from .errors import EnvironmentProblem, UserError
 from .pipeline import STYLES, BuildOptions, build, parse_sizes
 
 ISSUES_URL = "https://github.com/faramarz/crossword-poster/issues"
@@ -21,6 +23,7 @@ EASY = {
     "sample": "build the bundled birthday example so you can see the result in one command",
     "template": "write a starter clues file (CSV) to fill in",
     "doctor": "check that this computer is ready (Python, fonts, Chromium)",
+    "install-browser": "download the Chromium browser that prints the poster (one time)",
 }
 POWER = {
     "pool": "clues file -> cleaned list of answers, with a report of problems",
@@ -47,9 +50,9 @@ def top_help() -> str:
         "",
         "Start here:",
     ]
-    lines += [f"  {k.ljust(12)} {v}" for k, v in EASY.items()]
+    lines += [f"  {k.ljust(16)} {v}" for k, v in EASY.items()]
     lines += ["", "For power users (each runs one stage of `build`):"]
-    lines += [f"  {k.ljust(12)} {v}" for k, v in POWER.items()]
+    lines += [f"  {k.ljust(16)} {v}" for k, v in POWER.items()]
     lines += [
         "",
         "Run `crossword-poster <command> --help` for the options of a command.",
@@ -227,20 +230,51 @@ def cmd_template(argv: list) -> int:
     return 0
 
 
+# ----------------------------------------------------------- install-browser
+def cmd_install_browser(argv: list) -> int:
+    """``install-browser``: download Playwright's Chromium with the Python that runs this program."""
+    ap = argparse.ArgumentParser(
+        prog="crossword-poster install-browser",
+        description="Download the Chromium browser that prints the poster (about 150 MB, one time). It runs "
+        "`python -m playwright install chromium` with the same Python that runs crossword-poster, so it also works "
+        "when crossword-poster was installed with pipx, uv or in a virtual environment.",
+    )
+    ap.add_argument("--with-deps", action="store_true",
+                    help="also install the system libraries Chromium needs (Linux only; may ask for your password)")  # fmt: skip
+    a = ap.parse_args(argv)
+    cmd = install_command(a.with_deps)
+    print(f"Running: {install_command_text(a.with_deps)}", flush=True)
+    try:
+        code = subprocess.call(cmd)
+    except OSError as exc:
+        raise EnvironmentProblem(
+            f"Could not run the browser installer ({exc.__class__.__name__}: {exc}).",
+            f"run `{install_command_text(a.with_deps)}` yourself in a terminal",
+        ) from exc
+    if code != 0:
+        raise EnvironmentProblem(
+            f"The browser installer stopped with status {code}.",
+            "check your internet connection and disk space and try again; on Linux, add --with-deps. "
+            f"To run it yourself: {install_command_text(a.with_deps)}",
+        )
+    ok, detail = check_chromium()
+    if not ok:
+        raise EnvironmentProblem(f"The download finished but Chromium still does not start: {detail}")
+    print(f"Done: {detail} is ready. Next:  crossword-poster sample --out my-first-poster")
+    return 0
+
+
 # -------------------------------------------------------------------- main
 def _commands() -> dict:
-    cmds = {"build": cmd_build, "sample": cmd_sample, "template": cmd_template}
+    cmds = {
+        "build": cmd_build, "sample": cmd_sample, "template": cmd_template, "install-browser": cmd_install_browser,
+    }  # fmt: skip
     for name, mod in MODULES.items():
         cmds[name] = (lambda m: lambda argv: import_module(f".{m}", __package__).main(argv) or 0)(mod)
     return cmds
 
 
-def main(argv: Optional[list] = None) -> int:
-    """Run the command line. Returns the exit status; user mistakes print a friendly message, not a traceback."""
-    argv = list(sys.argv[1:] if argv is None else argv)
-    for stream in (sys.stdout, sys.stderr):  # never crash on a console that cannot show a character
-        with contextlib.suppress(AttributeError, ValueError):
-            stream.reconfigure(errors="replace")
+def _dispatch(argv: list) -> int:
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(top_help())
         return 0 if argv else 2
@@ -256,13 +290,27 @@ def main(argv: Optional[list] = None) -> int:
             file=sys.stderr,
         )
         return 2
+    return commands[cmd](rest)
+
+
+def main(argv: Optional[list] = None) -> int:
+    """Run the command line. Returns the exit status; user mistakes print a friendly message, not a traceback."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    for stream in (sys.stdout, sys.stderr):  # never crash on a console that cannot show a character
+        with contextlib.suppress(AttributeError, ValueError):
+            stream.reconfigure(errors="replace")
     try:
-        return commands[cmd](rest)
+        return _dispatch(argv)
     except UserError as exc:
         print(f"\nError: {exc.message}", file=sys.stderr)
         if exc.hint:
             print(f"How to fix: {exc.hint}", file=sys.stderr)
         return exc.exit_code
+    except BrokenPipeError:
+        # the reader went away (`crossword-poster ... | head`): stop quietly, and make the exit-time flush quiet too
+        with contextlib.suppress(Exception):
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        return 0
     except KeyboardInterrupt:
         print("\nCancelled.", file=sys.stderr)
         return 130

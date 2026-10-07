@@ -33,6 +33,7 @@ from typing import Optional
 from .common import BLEED, browser_context, font_face, parse_size, png_preview, run_pdf
 from .errors import UserError
 from .pool import ENUM_RE
+from .validate import check_shape
 
 DEFAULT_TITLE = "My Crossword"
 DEFAULT_BYLINE = "A custom crossword poster."
@@ -96,6 +97,9 @@ def size_config(trim):
 
 
 # --------------------------------------------------------------- grid / clues (copied from render.py, trimmed)
+_GRID_HINT = "use the grid.json written by `build`, and run `crossword-poster validate` on it to see what is wrong"
+
+
 def analyse(gj):
     g = gj["grid"]
     R, C = len(g), len(g[0])
@@ -125,14 +129,22 @@ def analyse(gj):
                     entries.append(dict(number=n, direction=d, answer=w, row=r, col=c))
     by = {(str(x["direction"]).lower(), int(x["number"])): x for x in gj["clues"]}
     for e in entries:
-        x = by[(e["direction"], e["number"])]
-        assert re.sub(r"[^A-Z]", "", x["answer"].upper()) == e["answer"], (e, x)
+        x = by.get((e["direction"], e["number"]))
+        if x is None:
+            raise UserError(f"The grid file has no clue for {e['number']} {e['direction']}.", _GRID_HINT)
+        if re.sub(r"[^A-Z]", "", x["answer"].upper()) != e["answer"]:
+            raise UserError(
+                f"The clue for {e['number']} {e['direction']} says the answer is {x['answer'][:30]!r}, "
+                f"but the grid spells {e['answer']!r}.",
+                _GRID_HINT,
+            )
         t = re.sub(r"\s+", " ", x["clue"]).strip()
         if not ENUM_RE.search(t):
             t += f" ({len(e['answer'])})"
         e["text"] = t
         e["id"] = x.get("id") or x.get("source")
-    assert len(entries) == len(gj["clues"]) == len(by), (len(entries), len(gj["clues"]))
+    if not len(entries) == len(gj["clues"]) == len(by):
+        raise UserError(f"The grid has {len(entries)} words but the file lists {len(gj['clues'])} clues.", _GRID_HINT)
     return dict(rows=R, cols=C, cells=cells, nums=nums, entries=entries)
 
 
@@ -621,6 +633,7 @@ def load_grid(path: str) -> dict:
         raise UserError(f"{path} not found.", "run `crossword-poster build` or `generate` first") from None
     except json.JSONDecodeError as exc:
         raise UserError(f"{path} is not a valid grid file ({exc}).") from exc
+    check_shape(gj, path, letters_only=True)
     if "clues" not in gj:
         raise UserError(f"{path} has no clues.", "use the grid.json written by `build` (it includes the clues)")
     return analyse(gj)

@@ -17,7 +17,6 @@ from .errors import EnvironmentProblem, UserError
 
 BLEED = 0.125  # inches, all sides
 CHROMIUM_ENV = "CROSSWORD_POSTER_CHROMIUM"
-INSTALL_CHROMIUM = "python -m playwright install chromium"
 
 # (family directory, file name) of every bundled font the renderer uses
 BUNDLED_FONTS = (
@@ -93,9 +92,27 @@ def _autodetect() -> Iterator[str]:
             yield fixed
 
 
+def install_command(with_deps: bool = False) -> list[str]:
+    """The command that downloads Playwright's Chromium, run with the Python that is running this program.
+
+    ``sys.executable`` matters: under pipx, uv or a virtual environment a bare ``python`` is a different
+    interpreter that does not have Playwright.
+    """
+    return [sys.executable, "-m", "playwright", "install", *(["--with-deps"] if with_deps else []), "chromium"]
+
+
+def install_command_text(with_deps: bool = False) -> str:
+    """:func:`install_command` as text to paste into a terminal (the interpreter path is quoted: it may hold spaces)."""
+    cmd = install_command(with_deps)
+    return " ".join([f'"{cmd[0]}"', *cmd[1:]])
+
+
 def chromium_fix_message() -> str:
     """The exact instruction for getting a working Chromium."""
-    return f"run `{INSTALL_CHROMIUM}` (or set {CHROMIUM_ENV} to the path of a Chromium/Chrome executable)"
+    return (
+        "run `crossword-poster install-browser`; if that does not work, run "
+        f"`{install_command_text()}` yourself (or set {CHROMIUM_ENV} to the path of a Chromium/Chrome executable)"
+    )
 
 
 def launch(pw):
@@ -166,7 +183,8 @@ def browser_context():
     with sync_playwright() as pw:
         browser = launch(pw)
         try:
-            yield browser.new_context()
+            # offline: the poster page is self-contained, so no request may ever leave this machine
+            yield browser.new_context(offline=True)
         finally:
             browser.close()
 

@@ -1,10 +1,11 @@
 """Command line behaviour: help, version, friendly errors (never a traceback), template, doctor."""
 
 import csv
+import sys
 
 import pytest
 
-from crossword_poster import __version__, cli, pipeline
+from crossword_poster import __version__, cli, common, pipeline
 from tests.conftest import write_csv
 
 
@@ -94,7 +95,8 @@ def test_build_stops_with_a_clear_message_when_chromium_is_missing(capsys, small
     monkeypatch.setattr(pipeline, "check_chromium", lambda: (False, "no browser here"))
     code, _, err = run(capsys, "build", "--clues", str(small_csv), "--out", str(tmp_path / "o"))
     assert code == 3
-    assert "python -m playwright install chromium" in err
+    assert "crossword-poster install-browser" in err
+    assert f'"{sys.executable}" -m playwright install chromium' in err
     assert "CROSSWORD_POSTER_CHROMIUM" in err
 
 
@@ -177,7 +179,8 @@ def test_doctor_reports_success_and_failure(capsys, monkeypatch):
     monkeypatch.setattr(doctor, "check_chromium", lambda: (False, "boom"))
     code, out, _ = run(capsys, "doctor")
     assert code == 1
-    assert "python -m playwright install chromium" in out
+    assert "crossword-poster install-browser" in out
+    assert f'"{sys.executable}" -m playwright install chromium' in out
     assert "CROSSWORD_POSTER_CHROMIUM" in out
 
 
@@ -188,3 +191,70 @@ def test_unexpected_errors_are_summarised_not_dumped(capsys, monkeypatch):
     assert code == 70
     assert "Something unexpected" in err and "issues" in err
     assert "Traceback" not in err
+
+
+# ---------------------------------------------------------- install-browser
+def test_install_command_uses_this_python_and_quotes_it():
+    cmd = common.install_command()
+    assert cmd == [sys.executable, "-m", "playwright", "install", "chromium"]
+    assert common.install_command_text().startswith(f'"{sys.executable}" -m playwright install chromium')
+    assert common.install_command(with_deps=True)[-2:] == ["--with-deps", "chromium"]
+    assert "--with-deps" in common.install_command_text(with_deps=True)
+
+
+def test_install_command_text_quotes_a_path_with_spaces(monkeypatch):
+    monkeypatch.setattr(sys, "executable", r"C:\Program Files\Python 3\python.exe")
+    assert common.install_command_text() == r'"C:\Program Files\Python 3\python.exe" -m playwright install chromium'
+
+
+def test_install_browser_runs_the_command_with_this_python(capsys, monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd: calls.append(cmd) or 0)
+    monkeypatch.setattr(cli, "check_chromium", lambda: (True, "Chromium 9.9"))
+    code, out, _ = run(capsys, "install-browser")
+    assert code == 0
+    assert calls == [[sys.executable, "-m", "playwright", "install", "chromium"]]
+    assert "Chromium 9.9" in out
+
+
+def test_install_browser_failure_is_friendly_and_shows_the_manual_command(capsys, monkeypatch):
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd: 1)
+    code, _, err = run(capsys, "install-browser", "--with-deps")
+    assert code == 3
+    assert "stopped with status 1" in err
+    assert "--with-deps chromium" in err
+
+
+def test_install_browser_is_listed_in_the_help(capsys):
+    _, out, _ = run(capsys, "--help")
+    assert "install-browser" in out
+
+
+def test_build_help_documents_the_time_limit(capsys):
+    with pytest.raises(SystemExit):
+        cli.main(["build", "--help"])
+    assert "--time-limit" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------- closed pipes
+def test_broken_pipe_inside_a_command_exits_quietly(capsys, monkeypatch):
+    def boom(argv):
+        raise BrokenPipeError
+
+    monkeypatch.setattr(cli, "_commands", lambda: {"doctor": boom})
+    code, out, err = run(capsys, "doctor")
+    assert code == 0
+    assert out == "" and err == ""
+
+
+def test_piping_into_a_reader_that_has_gone_prints_no_traceback():
+    import subprocess
+
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "crossword_poster", "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    proc.stdout.close()  # like `| head` after it has had enough
+    err = proc.stderr.read()
+    proc.wait(timeout=60)
+    proc.stderr.close()
+    assert b"Traceback" not in err and b"BrokenPipeError" not in err
