@@ -224,8 +224,8 @@ options:
 what to build:
   --clues FILE          CSV or .xlsx with one clue and one answer per row
   --title TITLE         title across the top of the poster (default: 'My Crossword')
-  --subtitle, --byline SUBTITLE
-                        line next to the title (default: 'A custom crossword poster.')
+  --subtitle SUBTITLE   line next to the title; --byline is an alias (default: 'A custom crossword
+                        poster.')
   --size WxH            poster size in inches; 18x24, 24x36 and 36x48 are tuned; several sizes:
                         18x24,24x36 (default 24x36)
   --style {black,icons,grey,all}
@@ -248,7 +248,8 @@ reading the file:
 
 grid search (the defaults are fine for most files):
   --attempts ATTEMPTS   layouts to try per search round (default 1000)
-  --workers WORKERS     parallel processes; the result does not depend on it (default 2)
+  --workers WORKERS     parallel processes; the result does not depend on it (default: the number
+                        of CPUs, at most 4)
   --max-width MAX_WIDTH
                         limit the grid width in squares (default: automatic)
   --max-height MAX_HEIGHT
@@ -662,8 +663,8 @@ options:
   --grey-fill GREY_FILL
                         colour of the grey style, the key and the solution (default #a3a3a3)
   --title TITLE         poster title (default: 'My Crossword')
-  --byline, --subtitle BYLINE
-                        line to the right of the title (default: 'A custom crossword poster.')
+  --byline BYLINE       line to the right of the title; --subtitle is an alias (default: 'A custom
+                        crossword poster.')
   --spot-text SPOT_TEXT
                         short text (e.g. a number) reversed out of the widest black void in
                         variant B
@@ -713,7 +714,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --title TITLE
-  --byline, --subtitle BYLINE
+  --byline BYLINE       the poster byline (alias: --subtitle)
   --sizes SIZES         comma list (default: every size folder found)
   --grid GRID           grid.json (default OUTROOT/grid.json)
   --block-fill BLOCK_FILL

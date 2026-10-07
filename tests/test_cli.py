@@ -310,17 +310,34 @@ def test_broken_pipe_inside_a_command_exits_quietly(capsys, monkeypatch):
     assert out == "" and err == ""
 
 
-def test_piping_into_a_reader_that_has_gone_prints_no_traceback():
+@pytest.mark.parametrize("unbuffered", [False, True])
+@pytest.mark.parametrize("args", [["--help"], ["build", "--help"], ["template", "--help"]])
+def test_piping_into_a_reader_that_has_gone_prints_no_traceback(args, unbuffered):
+    """The reader is already gone before the program starts, so the very first flush of stdout fails, every time.
+
+    Buffered output (the normal case on a pipe) only fails when Python flushes at exit, which used to print "Exception
+    ignored ... BrokenPipeError"; PYTHONUNBUFFERED=1 (set on some machines) makes the first print fail instead.
+    """
+    import os
     import subprocess
 
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "crossword_poster", "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    proc.stdout.close()  # like `| head` after it has had enough
-    err = proc.stderr.read()
-    proc.wait(timeout=60)
-    proc.stderr.close()
-    assert b"Traceback" not in err and b"BrokenPipeError" not in err
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONUNBUFFERED"}
+    if unbuffered:
+        env["PYTHONUNBUFFERED"] = "1"
+    read_end, write_end = os.pipe()
+    os.close(read_end)  # nobody will ever read: writing to write_end now raises a broken pipe
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "crossword_poster", *args],
+            stdout=write_end,
+            stderr=subprocess.PIPE,
+            timeout=120,
+            env=env,
+        )
+    finally:
+        os.close(write_end)
+    assert proc.stderr == b"", proc.stderr  # no traceback and no "Exception ignored ... BrokenPipeError" at exit
+    assert proc.returncode == 0
 
 
 def test_giveaways_are_listed_by_row_in_the_build_output():

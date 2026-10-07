@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import csv
+import errno
 import os
 import re
 import subprocess
@@ -79,8 +80,9 @@ def _build_parser(prog: str = "crossword-poster build") -> argparse.ArgumentPars
     g = ap.add_argument_group("what to build")
     g.add_argument("--clues", required=True, metavar="FILE", help="CSV or .xlsx with one clue and one answer per row")
     g.add_argument("--title", default="My Crossword", help="title across the top of the poster (default: %(default)r)")
-    g.add_argument("--subtitle", "--byline", dest="subtitle", default="A custom crossword poster.",
-                   help="line next to the title (default: %(default)r)")  # fmt: skip
+    g.add_argument("--subtitle", default="A custom crossword poster.",
+                   help="line next to the title; --byline is an alias (default: %(default)r)")  # fmt: skip
+    g.add_argument("--byline", dest="subtitle", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     g.add_argument("--size", default="24x36", metavar="WxH",
                    help="poster size in inches; 18x24, 24x36 and 36x48 are tuned; several sizes: 18x24,24x36 (default %(default)s)")  # fmt: skip
     g.add_argument("--style", default="grey", choices=[*STYLES, "all"],
@@ -113,7 +115,7 @@ def _build_parser(prog: str = "crossword-poster build") -> argparse.ArgumentPars
     g.add_argument("--max-len", type=int, default=20, help="longest allowed answer in letters (default %(default)s)")
     g = ap.add_argument_group("grid search (the defaults are fine for most files)")
     g.add_argument("--attempts", type=int, default=1000, help="layouts to try per search round (default %(default)s)")
-    g.add_argument("--workers", type=int, default=BuildOptions.workers, help="parallel processes; the result does not depend on it (default %(default)s)")  # fmt: skip
+    g.add_argument("--workers", type=int, default=BuildOptions.workers, help="parallel processes; the result does not depend on it (default: the number of CPUs, at most 4)")  # fmt: skip
     g.add_argument("--max-width", type=int, default=None, help="limit the grid width in squares (default: automatic)")
     g.add_argument("--max-height", type=int, default=None, help="limit the grid height in squares (default: automatic)")
     g.add_argument("--aspect", type=float, default=1.0, help="automatic window: width / height (default %(default)s)")
@@ -318,6 +320,18 @@ def _dispatch(argv: list) -> int:
     return commands[cmd](rest)
 
 
+def _flush_stdout() -> None:
+    """Flush stdout now. A reader that has gone away raises BrokenPipeError (Windows may say EINVAL instead)."""
+    try:
+        sys.stdout.flush()
+    except OSError as exc:
+        if isinstance(exc, BrokenPipeError) or exc.errno in (errno.EPIPE, errno.EINVAL):
+            raise BrokenPipeError(errno.EPIPE, "Broken pipe") from exc
+        raise
+    except (ValueError, AttributeError):  # stdout is closed or missing: nothing to flush
+        pass
+
+
 def main(argv: Optional[list] = None) -> int:
     """Run the command line. Returns the exit status; user mistakes print a friendly message, not a traceback."""
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -325,16 +339,26 @@ def main(argv: Optional[list] = None) -> int:
         with contextlib.suppress(AttributeError, ValueError):
             stream.reconfigure(errors="replace")
     try:
-        return _dispatch(argv)
+        try:
+            code = _dispatch(argv)
+        except SystemExit:  # argparse's --help and usage errors exit this way
+            _flush_stdout()
+            raise
+        _flush_stdout()  # a closed pipe is found here, where it is handled, not in the silent exit-time flush
+        return code
     except UserError as exc:
         print(f"\nError: {exc.message}", file=sys.stderr)
         if exc.hint:
             print(f"How to fix: {exc.hint}", file=sys.stderr)
         return exc.exit_code
     except BrokenPipeError:
-        # the reader went away (`crossword-poster ... | head`): stop quietly, and make the exit-time flush quiet too
+        # the reader went away (`crossword-poster ... | head`): stop quietly. Python flushes stdout again at exit, which
+        # would fail again and print "Exception ignored ... BrokenPipeError", so point stdout at the null device first
+        # (the pattern from the Python documentation; os.dup2 works on Windows too).
         with contextlib.suppress(Exception):
-            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, sys.stdout.fileno())
+            os.close(devnull)
         return 0
     except KeyboardInterrupt:
         print("\nCancelled.", file=sys.stderr)

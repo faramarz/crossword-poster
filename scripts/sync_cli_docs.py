@@ -5,7 +5,8 @@
 
 A help block is a ```text fenced block whose first line is ``usage: crossword-poster <command> ...`` (one block per
 command) or the first line of ``crossword-poster --help``. Everything else in the file is left alone. The help is
-captured at a terminal width of 100 columns so that the line wrapping is always the same.
+captured at a terminal width of 100 columns, with colour off and the environment variables that change the defaults
+removed, so that the text is always the same.
 """
 
 from __future__ import annotations
@@ -25,7 +26,14 @@ USAGE_LINE = re.compile(r"usage: crossword-poster ([a-z-]+) ")
 
 def help_text(command: str | None) -> str:
     """What ``crossword-poster [command] --help`` prints (at 100 columns)."""
-    env = dict(os.environ, COLUMNS="100", PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", ""))
+    env = {k: v for k, v in os.environ.items() if k not in ("FORCE_COLOR", "BLOCK_FILL", "PYTHON_COLORS")}
+    env.update(
+        COLUMNS="100",
+        NO_COLOR="1",
+        PYTHON_COLORS="0",
+        PYTHONUTF8="1",
+        PYTHONPATH=str(ROOT) + os.pathsep + env.get("PYTHONPATH", ""),
+    )
     args = [sys.executable, "-m", "crossword_poster", *([command] if command else []), "--help"]
     out = subprocess.run(args, capture_output=True, text=True, env=env, check=True)
     return out.stdout.rstrip("\n")

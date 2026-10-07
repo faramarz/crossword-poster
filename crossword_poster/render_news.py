@@ -909,11 +909,11 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--title", default=DEFAULT_TITLE, help="poster title (default: %(default)r)")
     ap.add_argument(
         "--byline",
-        "--subtitle",
         dest="byline",
         default=DEFAULT_BYLINE,
-        help="line to the right of the title (default: %(default)r)",
+        help="line to the right of the title; --subtitle is an alias (default: %(default)r)",
     )
+    ap.add_argument("--subtitle", dest="byline", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     ap.add_argument(
         "--spot-text", default="", help="short text (e.g. a number) reversed out of the widest black void in variant B"
     )
