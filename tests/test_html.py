@@ -64,3 +64,75 @@ def test_javascript_escapes_markup_before_using_innerhtml():
     # the page inserts clue text with innerHTML through esc(); make sure it neutralises &, < and >
     assert "const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')" in rn.PAGE
     assert "textContent=D.title" in rn.PAGE.replace(" ", "")
+
+
+def test_embedded_fonts_carry_their_copyright_and_licence_notice():
+    html = page_for(["a", "b", "c", "d", "e"])
+    head = html[: html.index("@font-face")]
+    assert "Archivo Narrow Project Authors" in head
+    assert "Oswald Project Authors" in head
+    assert "SIL Open Font License 1.1" in head
+    assert html.count("base64,") >= 4
+
+
+def test_colour_options_are_validated():
+    import pytest
+
+    from crossword_poster.errors import UserError
+
+    for good in (None, "", "#c8d6e5", "#fff", "lightgrey", "Black"):
+        assert rn.RenderOptions(block_fill=good).fill_dark
+    for bad in ('red"/><script>', "url(http://x)", "#12", "rgb(1,2,3)", "a b", "#ggg"):
+        with pytest.raises(UserError) as exc:
+            rn.RenderOptions(block_fill=bad)
+        assert "--block-fill" in exc.value.message
+    with pytest.raises(UserError, match="--grey-fill"):
+        rn.RenderOptions(grey_fill="x;y")
+
+
+def test_every_generated_label_goes_through_esc():
+    for needle in ("esc(it.label)", "esc(it.e.number)", "esc(c.n)", "esc(c.l)", "esc(D.blockFill"):
+        assert needle in rn.PAGE or needle in rn.SOLUTION_PAGE, needle
+    assert "const esc=" in rn.SOLUTION_PAGE
+    assert "${c.n}" not in rn.PAGE + rn.SOLUTION_PAGE and "${c.l}" not in rn.PAGE + rn.SOLUTION_PAGE
+
+
+def test_the_renderer_rejects_a_tampered_grid_file(small_grid, tmp_path):
+    import copy
+    import json
+
+    import pytest
+
+    from crossword_poster.errors import UserError
+
+    _, res = small_grid
+    bad = copy.deepcopy(res)
+    r, c = next((r, c) for r, row in enumerate(bad["grid"]) for c, ch in enumerate(row) if ch)
+    bad["grid"][r][c] = "<img src=x onerror=alert(1)>"
+    path = tmp_path / "bad.json"
+    path.write_text(json.dumps(bad), encoding="utf-8")
+    with pytest.raises(UserError) as exc:
+        rn.load_grid(str(path))
+    assert "single letter" in exc.value.message
+    # a grid whose clues disagree with the letters is an error message, not an AssertionError dump
+    worse = copy.deepcopy(res)
+    worse["clues"][0]["answer"] = "QQQQ"
+    path.write_text(json.dumps(worse), encoding="utf-8")
+    with pytest.raises(UserError, match="the grid spells"):
+        rn.load_grid(str(path))
+
+
+def test_size_warnings_for_tiny_text_tiny_squares_and_a_blank_foot():
+    from crossword_poster.render_news import size_warnings
+
+    fine = dict(fs=12.0, cell=0.5, blankFrac=0.02)
+    assert size_warnings("24x36", fine) == []
+    assert size_warnings("24x36", dict(fine, fs=9.0, cell=0.3, blankFrac=0.0799)) == []  # exactly at the limits is fine
+    small_text = size_warnings("18x24", dict(fine, fs=8.4))
+    assert len(small_text) == 1 and "8.4 pt" in small_text[0] and "below 9 pt" in small_text[0]
+    assert "bigger --size" in small_text[0]
+    small_squares = size_warnings("18x24", dict(fine, cell=0.28))
+    assert len(small_squares) == 1 and "0.28 in" in small_squares[0] and "below 0.3 in" in small_squares[0]
+    blank = size_warnings("24x36", dict(fine, blankFrac=0.14))
+    assert len(blank) == 1 and "14%" in blank[0] and "smaller --size" in blank[0]
+    assert len(size_warnings("18x24", dict(fs=8, cell=0.2, blankFrac=0.5))) == 3

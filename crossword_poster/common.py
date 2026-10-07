@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import glob
 import os
+import re
 import shutil
 import sys
 from collections.abc import Iterator
@@ -12,6 +13,7 @@ from contextlib import contextmanager
 from functools import cache
 from importlib import resources
 from pathlib import Path
+from typing import Optional
 
 from .errors import EnvironmentProblem, UserError
 
@@ -187,6 +189,21 @@ def browser_context():
             yield browser.new_context(offline=True)
         finally:
             browser.close()
+
+
+# ------------------------------------------------------------------ options
+_COLOUR_RE = re.compile(r"#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,30}")
+
+
+def check_colour(value: Optional[str], flag: str) -> Optional[str]:
+    """Return ``value`` if it is a hex colour or a plain colour name (or empty); otherwise raise UserError."""
+    if value and not _COLOUR_RE.fullmatch(value):
+        raise UserError(
+            f"{flag} {value[:40]!r} is not a colour I understand.",
+            "use a hex colour such as '#c8d6e5' (quote it: # starts a comment in some shells) or a colour name "
+            "such as lightgrey",
+        )
+    return value
 
 
 # ------------------------------------------------------------------ output

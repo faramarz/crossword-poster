@@ -19,7 +19,7 @@ from . import generate as gen
 from . import pool as poolmod
 from . import validate as val
 from . import verify as ver
-from .common import BLEED, browser_context, check_chromium, chromium_fix_message, parse_size
+from .common import BLEED, browser_context, check_chromium, check_colour, chromium_fix_message, parse_size
 from .errors import EnvironmentProblem, IncompleteGrid, UserError
 
 STYLES = {"black": "A", "icons": "B", "grey": "C"}
@@ -75,6 +75,7 @@ class SizeInfo:
     size: str
     cell_in: float
     clue_pt: float
+    warnings: list = field(default_factory=list)
 
 
 @dataclass
@@ -117,6 +118,8 @@ def build(opts: BuildOptions, log: Log = lambda m: print(m, flush=True)) -> Buil
     t0 = time.time()
     if opts.style not in (*STYLES, "all"):
         raise UserError(f"Unknown style {opts.style!r}.", "choose grey, black, icons or all")
+    check_colour(opts.block_fill, "--block-fill")
+    check_colour(opts.grey_fill, "--grey-fill")
     sizes = opts.sizes
     for s in sizes:
         w, _ = parse_size(s)
@@ -210,7 +213,7 @@ def build(opts: BuildOptions, log: Log = lambda m: print(m, flush=True)) -> Buil
     with browser_context() as ctx:
         for s in sizes:
             report = render_news.render_size(ctx, an, s, details, make, ropts, log=log)
-            result.sizes.append(SizeInfo(s, report["fit"]["cell"], report["fit"]["fs"]))
+            result.sizes.append(SizeInfo(s, report["fit"]["cell"], report["fit"]["fs"], report["warnings"]))
         # 5. answer sheet and check page
         _step(log, 5, total, "Making the answer sheet and the actual-size check page")
         if not opts.no_solution:
@@ -308,6 +311,7 @@ def summary(result: BuildResult, opts: BuildOptions) -> str:
         lines.append(
             f"Poster {s.size}: each square is {s.cell_in:.3f} in ({s.cell_in * 25.4:.1f} mm); clue text is {s.clue_pt:.1f} pt."
         )
+        lines.extend(f"  Warning: {w}" for w in s.warnings)
     if result.left_out:
         lines.append(
             f"{len(result.left_out)} answer(s) were left out: " + ", ".join(i["answer"] for i in result.left_out) + "."

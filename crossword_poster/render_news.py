@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from .common import BLEED, browser_context, font_face, parse_size, png_preview, run_pdf
+from .common import BLEED, browser_context, check_colour, font_face, parse_size, png_preview, run_pdf
 from .errors import UserError
 from .pool import ENUM_RE
 from .validate import check_shape
@@ -217,9 +217,19 @@ def pick_icons(an, n=3, spot_text=""):
 
 
 # ----------------------------------------------------------------------- HTML
-def font_faces():
+FONT_NOTICE = (
+    "/* Fonts embedded below: Archivo Narrow, Copyright 2019 The Archivo Narrow Project Authors "
+    "(https://github.com/Omnibus-Type/ArchivoNarrow); Oswald, Copyright 2016 The Oswald Project Authors "
+    "(https://github.com/googlefonts/OswaldFont). Both are licensed under the SIL Open Font License 1.1 "
+    "(https://openfontlicense.org). */"
+)
+
+
+def font_faces() -> str:
+    """The CSS ``@font-face`` rules for the bundled fonts, preceded by their copyright and licence notice."""
     return "\n".join(
         [
+            FONT_NOTICE,
             font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Regular.ttf", 400),
             font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Medium.ttf", 500),
             font_face("Archivo Narrow", "ArchivoNarrow", "ArchivoNarrow-Bold.ttf", 700),
@@ -264,7 +274,7 @@ for(const dir of ['across','down']){
   items.push({head:true,label:dir.toUpperCase()});
   D.entries.filter(e=>e.direction===dir).sort((a,b)=>a.number-b.number).forEach(e=>items.push({head:false,e}));
 }
-const itemHTML=it=>it.head?`<div class="hd">${it.label}</div>`:`<div class="clue"><span class="n">${it.e.number}</span><span class="t">${esc(it.e.text)}</span></div>`;
+const itemHTML=it=>it.head?`<div class="hd">${esc(it.label)}</div>`:`<div class="clue"><span class="n">${esc(it.e.number)}</span><span class="t">${esc(it.e.text)}</span></div>`;
 $('meas').innerHTML=items.map(itemHTML).join('');
 $('ttl').textContent=D.title; $('by').textContent=D.key?('Answer key. '+D.byline):D.byline;
 const Wpx=D.W*IN, Hpx=D.H*IN, Gpx=D.g*IN;
@@ -288,7 +298,7 @@ function drawGrid(cell,yG,Wg){
   const gb=$('gridbox');gb.style.left=(Wpx-Wg*IN)+'px';gb.style.top=yG+'px';
   const svg=document.createElementNS(NS,'svg');
   svg.setAttribute('width',(W+2*o)+'pt');svg.setAttribute('height',(H+2*o)+'pt');svg.setAttribute('viewBox',`${-o} ${-o} ${W+2*o} ${H+2*o}`);
-  let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="${D.blockFill||'#000'}"/>`;
+  let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="${esc(D.blockFill||'#000')}"/>`;
   for(const c of D.cells) s+=`<rect x="${c.c*cpt}" y="${c.r*cpt}" width="${cpt}" height="${cpt}" fill="#fff"/>`;
   s+=`<g fill="none" stroke="#000" stroke-width="${sw}">`;
   for(const c of D.cells) s+=`<rect x="${c.c*cpt}" y="${c.r*cpt}" width="${cpt}" height="${cpt}"/>`;
@@ -298,8 +308,8 @@ function drawGrid(cell,yG,Wg){
   const np=cpt*D.numRatio;
   for(const c of D.cells){
     const x=c.c*cpt,y=c.r*cpt;
-    if(c.n) s+=`<text x="${x+cpt*0.07}" y="${y+np*0.88+cpt*0.04}" font-family="Archivo Narrow" font-weight="700" font-size="${np}" fill="#000">${c.n}</text>`;
-    if(D.key) s+=`<text x="${x+cpt*0.5}" y="${y+cpt*0.84}" text-anchor="middle" font-family="Archivo Narrow" font-weight="700" font-size="${cpt*0.6}" fill="#000">${c.l}</text>`;
+    if(c.n) s+=`<text x="${x+cpt*0.07}" y="${y+np*0.88+cpt*0.04}" font-family="Archivo Narrow" font-weight="700" font-size="${np}" fill="#000">${esc(c.n)}</text>`;
+    if(D.key) s+=`<text x="${x+cpt*0.5}" y="${y+cpt*0.84}" text-anchor="middle" font-family="Archivo Narrow" font-weight="700" font-size="${cpt*0.6}" fill="#000">${esc(c.l)}</text>`;
   }
   s+=`<rect x="${-o/2}" y="${-o/2}" width="${W+o}" height="${H+o}" fill="none" stroke="#000" stroke-width="${o}"/>`;
   svg.innerHTML=s;gb.innerHTML='';gb.appendChild(svg);
@@ -405,6 +415,34 @@ function maxFs(P){
   while(v>D.fsMin&&!feasible(P,v))v=Math.round((v-0.05)*100)/100;
   return feasible(P,v)?v:null;
 }
+/* balance: the largest common shortfall d that still pours, so every column ends at about the same height */
+function balance(P,hs,fs,lh){
+  let lo=0,hi=Math.max(...P.cols.map(c=>c.cap))*0.5;
+  const shr=d=>P.cols.map(c=>Object.assign({},c,{cap:c.cap-d}));
+  for(let k=0;k<14;k++){const mid=(lo+hi)/2;if(pour(hs,fs,shr(mid),lh).ok)lo=mid;else hi=mid;}
+  return{d:lo,shr,res:pour(hs,fs,shr(lo),lh)};
+}
+/* fraction of the box height left blank below the last clue once the columns are balanced */
+function blankFrac(P,fs,lh){
+  const b=balance(P,measure(P.wc,fs,lh),fs,lh);
+  if(!b.res.ok)return 1;
+  const bottom=Math.max(...b.res.placed.map((l,i)=>l.length?P.cols[i].y+b.res.used[i]:0));
+  return Math.max(0,1-bottom/Hpx);
+}
+/* few clues on a big poster leave the bottom empty: grow the clue text (never past 1.5x the tuned maximum) until the
+   blank is under D.blankMax or the text stops fitting; the squares are already as large as the width allows */
+function growText(P,fs){
+  const cap=Math.min(D.fsMax*1.5,(P.wc/PT)/D.minRatio);
+  let blank=blankFrac(P,fs);
+  if(blank<D.blankMax)return{fs,blank,grown:false};
+  let best=fs,misses=0;
+  for(let s=Math.round((fs+0.25)*100)/100;s<=cap+1e-9&&misses<3;s=Math.round((s+0.25)*100)/100){
+    if(!feasible(P,s)){misses++;continue;}
+    misses=0;best=s;blank=blankFrac(P,s);
+    if(blank<D.blankMax)break;
+  }
+  return{fs:best,blank,grown:best>fs};
+}
 function fitAll(){
   const log=[];
   for(const frac of D.tfracs){
@@ -431,7 +469,11 @@ function fitAll(){
     }
     let best=null;
     for(const P of feas){if(P.cell>=topCell*0.985&&(!best||P.fs>best.fs||(P.fs===best.fs&&P.cell>best.cell)))best=P;}
-    if(best)return{ok:true,frac,T:hd.T,hdrH:hd.h,kT:best.kT,m:best.m,kL:best.kL,cell:best.cell,fs:best.fs,lh:maxLh(best,best.fs),log};
+    if(best){
+      const gt=growText(best,best.fs),lh=maxLh(best,gt.fs);
+      return{ok:true,frac,T:hd.T,hdrH:hd.h,kT:best.kT,m:best.m,kL:best.kL,cell:best.cell,fs:gt.fs,lh,log,
+        fsBeforeGrowth:best.fs,grown:gt.grown,blankFrac:+blankFrac(best,gt.fs,lh).toFixed(4)};
+    }
   }
   return{ok:false,log};
 }
@@ -442,11 +484,7 @@ function applyPlan(F){
   const yG=hd.h+Gpx,P=planGeom(F.kT,F.m,yG,hd.h);
   const g=drawGrid(P.cell,yG,P.Wg);
   const hs=measure(P.wc,F.fs,F.lh);
-  // balance: the largest common shortfall d that still pours, so every column ends at about the same height
-  let lo=0,hi=Math.max(...P.cols.map(c=>c.cap))*0.5;
-  const shr=d=>P.cols.map(c=>Object.assign({},c,{cap:c.cap-d}));
-  for(let k=0;k<14;k++){const mid=(lo+hi)/2;if(pour(hs,F.fs,shr(mid),F.lh).ok)lo=mid;else hi=mid;}
-  const res=pour(hs,F.fs,shr(lo),F.lh);
+  const res=balance(P,hs,F.fs,F.lh).res;
   if(!res.ok)throw new Error('plan no longer pours (non-monotone fit)');
   const cl=$('clues');cl.innerHTML='';
   const gp=gaps(F.fs,F.lh);
@@ -534,6 +572,7 @@ html,body{width:__PW__in;height:__PH__in;overflow:hidden;background:#fff;-webkit
 </style></head><body><div id="box"><div id="hdr"><h1 id="ttl"></h1></div><div id="gridbox"></div></div>
 <script>
 const D=__DATA__;const NS='http://www.w3.org/2000/svg';const IN=96;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 document.getElementById('ttl').textContent=D.title;
 document.fonts.ready.then(async()=>{
   await Promise.all(['700 20px Oswald','700 20px "Archivo Narrow"'].map(f=>document.fonts.load(f)));
@@ -549,14 +588,14 @@ document.fonts.ready.then(async()=>{
   document.getElementById('hdr').style.top=off+'px';
   gb.style.left=((availW-WT/72*IN)/2)+'px';gb.style.top=(off+hh+g)+'px';
   const svg=document.createElementNS(NS,'svg');svg.setAttribute('width',WT+'pt');svg.setAttribute('height',HT+'pt');svg.setAttribute('viewBox',`${-o} ${-o} ${WT} ${HT}`);
-  let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="${D.blockFill||'#000'}"/>`;
+  let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="${esc(D.blockFill||'#000')}"/>`;
   for(const c of D.cells)s+=`<rect x="${c.c*cpt}" y="${c.r*cpt}" width="${cpt}" height="${cpt}" fill="#fff"/>`;
   s+=`<g fill="none" stroke="#000" stroke-width="${sw}">`;
   for(const c of D.cells)s+=`<rect x="${c.c*cpt}" y="${c.r*cpt}" width="${cpt}" height="${cpt}"/>`;
   s+='</g>';
   for(const c of D.cells){const x=c.c*cpt,y=c.r*cpt;
-    if(c.n)s+=`<text x="${x+cpt*0.07}" y="${y+np*0.88+cpt*0.04}" font-family="Archivo Narrow" font-weight="700" font-size="${np}">${c.n}</text>`;
-    s+=`<text x="${x+cpt*0.5}" y="${y+cpt*0.84}" text-anchor="middle" font-family="Archivo Narrow" font-weight="700" font-size="${cpt*0.6}">${c.l}</text>`;}
+    if(c.n)s+=`<text x="${x+cpt*0.07}" y="${y+np*0.88+cpt*0.04}" font-family="Archivo Narrow" font-weight="700" font-size="${np}">${esc(c.n)}</text>`;
+    s+=`<text x="${x+cpt*0.5}" y="${y+cpt*0.84}" text-anchor="middle" font-family="Archivo Narrow" font-weight="700" font-size="${cpt*0.6}">${esc(c.l)}</text>`;}
   s+=`<rect x="${-o/2}" y="${-o/2}" width="${W+o}" height="${H+o}" fill="none" stroke="#000" stroke-width="${o}"/>`;
   svg.innerHTML=s;gb.appendChild(svg);
   window.__info={cell,titlePt:T,hdrH:hh/IN,gridW:WT/72,gridH:HT/72};window.__done=true;
@@ -578,7 +617,7 @@ def build_data(an, tcfg, cw, ch, key=False, icons=None, fill="#000000", title=DE
         sw=tcfg["sw"], outer=tcfg["outer"], numRatio=0.27, tmax=tcfg["tmax"], byRatio=0.25, byEm=13.0,
         title=title, byline=byline,
         tfracs=tcfg.get("tfracs", [1.0, 0.9, 0.8, 0.7, 0.6]), mode=tcfg.get("mode", "any"),
-        minRatio=11.0, maxRatio=30.0, gapC=0.26, gapH=0.5, gapB=1.0, lhMax=1.22, maxJust=1.6,
+        minRatio=11.0, maxRatio=30.0, blankMax=0.08, gapC=0.26, gapH=0.5, gapB=1.0, lhMax=1.22, maxJust=1.6,
     )  # fmt: skip
 
 
@@ -612,6 +651,10 @@ class RenderOptions:
     png_width: int = 1200
     build_dir: Optional[str] = None
     quiet: bool = False
+
+    def __post_init__(self) -> None:
+        check_colour(self.block_fill, "--block-fill")
+        check_colour(self.grey_fill, "--grey-fill")
 
     @property
     def fill_dark(self) -> str:
@@ -685,6 +728,33 @@ def render_solution(ctx, an: dict, outroot: str, opts: RenderOptions) -> dict:
     return dict(info, page=f"{pwid}x{phei}")
 
 
+MIN_CLUE_PT = 9.0  # smaller type is hard to read from a normal viewing distance
+MIN_SQUARE_IN = 0.3  # smaller squares are hard to write a letter in
+MAX_BLANK = 0.08  # more blank height than this at the foot of the poster looks unfinished
+
+
+def size_warnings(trim: str, fit: dict) -> list[str]:
+    """Plain-language warnings about a fitted poster (an empty list when the layout is comfortable)."""
+    out = []
+    if fit["fs"] < MIN_CLUE_PT:
+        out.append(
+            f"Poster {trim}: the clue text is only {fit['fs']:.1f} pt (below {MIN_CLUE_PT:g} pt), which is hard to read "
+            "on a wall. Fix: a bigger --size, or fewer or shorter clues."
+        )
+    if fit["cell"] < MIN_SQUARE_IN:
+        out.append(
+            f"Poster {trim}: the squares are only {fit['cell']:.2f} in wide (below {MIN_SQUARE_IN:g} in), which is too "
+            "small to write a letter in. Fix: a bigger --size, or fewer or shorter answers."
+        )
+    blank = fit.get("blankFrac", 0.0)
+    if blank >= MAX_BLANK:
+        out.append(
+            f"Poster {trim}: about {blank:.0%} of the height is blank at the bottom, because there are few clues for "
+            "this size. Fix: a smaller --size, or add more clues."
+        )
+    return out
+
+
 def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderOptions, log=print) -> dict:
     """Fit and render one trim size into OUTROOT/<trim>/. Returns the fit report (also written to fit.json)."""
     tw, th = parse_size(trim)
@@ -726,7 +796,11 @@ def render_size(ctx, an: dict, trim: str, outroot: str, make: set, opts: RenderO
         )
     report["fit_candidates"] = fit.pop("log")[:60]
     report["fit"] = fit
-    log(f"  {trim}: squares {fit['cell']:.3f} in, clue text {fit['fs']:.1f} pt")
+    report["warnings"] = size_warnings(trim, fit)
+    note = f" (grown from {fit['fsBeforeGrowth']:.1f} pt to fill the page)" if fit.get("grown") else ""
+    log(f"  {trim}: squares {fit['cell']:.3f} in, clue text {fit['fs']:.1f} pt{note}")
+    for w in report["warnings"]:
+        log(f"  warning: {w}")
 
     def render(tag, key, spot, bleed, fill=None, sw=None):
         pg = load(key, spot, bleed, tag, fill, sw)

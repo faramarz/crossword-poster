@@ -204,3 +204,35 @@ def test_verify_notices_a_wrong_title(sample_run, capsys):
     bad = ["verify", str(out / "details"), "--title", "Some other title", "--no-crops"]
     assert cli.main(bad) == 1
     assert "title and byline text present" in capsys.readouterr().out
+
+
+def test_few_clues_on_a_big_poster_grow_the_text_instead_of_leaving_the_foot_blank(tmp_path, capsys, small_csv):
+    code = cli.main(["build", "--clues", str(small_csv), "--size", "24x36", "--out", str(tmp_path), "--no-crops"])
+    out = capsys.readouterr().out
+    assert code == 0
+    fit = json.loads((tmp_path / "details" / "24x36" / "fit.json").read_text())["fit"]
+    assert fit["grown"] is True
+    assert fit["fs"] > fit["fsBeforeGrowth"]
+    assert fit["blankFrac"] < 0.08 or fit["fs"] >= 26.9  # grown until filled, or until the 1.5x cap
+    assert "grown from" in out
+
+
+def test_a_comfortable_layout_is_not_touched_and_has_no_warnings(sample_run):
+    out, _, text = sample_run
+    fit = json.loads((out / "details" / "18x24" / "fit.json").read_text())["fit"]
+    assert fit["fs"] >= fit["fsBeforeGrowth"]
+    assert "Warning" not in text
+
+
+def test_a_browser_context_is_offline_but_still_opens_local_pages(tmp_path):
+    from crossword_poster.common import browser_context
+
+    page_file = tmp_path / "p.html"
+    page_file.write_text("<title>local</title><p id=x>hello</p>", encoding="utf-8")
+    with browser_context() as ctx:
+        pg = ctx.new_page()
+        pg.goto(page_file.as_uri())
+        assert pg.inner_text("#x") == "hello"
+        reachable = pg.evaluate("fetch('https://example.com/').then(()=>true,()=>false)")
+        pg.close()
+    assert reachable is False
