@@ -83,8 +83,6 @@ def _check_page_size(rep: Report, pdf: str, tag: str, expect: tuple) -> None:
 
 
 def _check_poster(rep: Report, d: str, tag: str, trim: tuple, var: str, ctx: dict) -> None:
-    import numpy as np
-
     tw, th = trim
     _check_page_size(rep, f"{d}/poster.pdf", f"{tag}/poster.pdf", (tw + 2 * BLEED, th + 2 * BLEED))
     _check_page_size(rep, f"{d}/poster_trim.pdf", f"{tag}/poster_trim.pdf", (tw, th))
@@ -103,11 +101,14 @@ def _check_poster(rep: Report, d: str, tag: str, trim: tuple, var: str, ctx: dic
     margin = ctx["margins"][tw, th]
     im = pdfutil.render_gray(trim_pdf, 50)
     m = int((margin - 0.02) * 50)
-    ink = im < 250
-    edge = ink[:m].any() or ink[-m:].any() or ink[:, :m].any() or ink[:, -m:].any()
-    ys, xs = np.where(ink)
-    box = f"ink bbox x {xs.min() / 50:.2f}-{xs.max() / 50:.2f}, y {ys.min() / 50:.2f}-{ys.max() / 50:.2f} in"
-    rep.check(not edge, f"{tag}: no ink in the outer {margin:g} in margin ({box})")
+    box = im.point(lambda v: 255 if v < 250 else 0).getbbox()  # (left, top, right, bottom) of all ink
+    edge = box is None or box[0] < m or box[1] < m or box[2] > im.width - m or box[3] > im.height - m
+    where = (
+        "no ink"
+        if box is None
+        else f"ink bbox x {box[0] / 50:.2f}-{box[2] / 50:.2f}, y {box[1] / 50:.2f}-{box[3] / 50:.2f} in"
+    )
+    rep.check(not edge, f"{tag}: no ink in the outer {margin:g} in margin ({where})")
 
     text = _squeeze(pdfutil.page_text(trim_pdf))
     want = Counter(_squeeze(f"{n} {t}") for n, t in ctx["want"])
@@ -155,16 +156,15 @@ def _check_solution(rep: Report, pdf: str, ctx: dict) -> None:
 
 
 def _check_pngs(rep: Report, outroot: str, block_fill: Optional[str]) -> None:
-    import numpy as np
-    from PIL import Image
+    from PIL import Image, ImageChops
 
     for p in glob.glob(outroot + "/**/*.png", recursive=True):
         if "/.build/" in p or "/checks/" in p:
             continue
         with Image.open(p) as im:
-            a = np.asarray(im.convert("RGB")).astype(int)
+            r, g, b = im.convert("RGB").split()
             width = im.size[0]
-        grey = bool((a[..., 0] == a[..., 1]).all() and (a[..., 1] == a[..., 2]).all())
+        grey = ImageChops.difference(r, g).getbbox() is None and ImageChops.difference(g, b).getbbox() is None
         rep.check(
             grey or bool(block_fill),
             f"{os.path.relpath(p, outroot)}: {width}px wide, every pixel R=G=B"

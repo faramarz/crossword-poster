@@ -72,8 +72,10 @@ def test_render_png_has_the_requested_width(tmp_path):
         assert im.convert("L").getpixel((100, 290)) < 10  # the black square
 
 
-def test_render_gray_is_a_numpy_array(tmp_path):
-    p = make_pdf(tmp_path / "a.pdf", "")
-    arr = pdfutil.render_gray(p, 36)
-    assert arr.shape == (396, 306)
-    assert arr.min() == 255
+def test_render_gray_is_a_greyscale_image(tmp_path):
+    p = make_pdf(tmp_path / "a.pdf", "0 g 0 0 72 72 re f")
+    im = pdfutil.render_gray(p, 36)
+    assert im.mode == "L"
+    assert im.size == (306, 396)
+    assert im.getpixel((10, 380)) == 0  # the black square sits in the bottom-left corner
+    assert im.getpixel((200, 100)) == 255

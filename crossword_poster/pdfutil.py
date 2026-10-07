@@ -87,12 +87,12 @@ def render_png(pdf, png, width_px: int = 1200) -> None:
 
 
 def render_gray(pdf, dpi: float):
-    """Page 1 as a 2-D uint8 numpy array (0 = black, 255 = white) at ``dpi``."""
+    """Page 1 as a greyscale Pillow image (0 = black, 255 = white) at ``dpi``."""
     import pypdfium2 as pdfium
 
     doc = pdfium.PdfDocument(str(pdf))
     try:
-        return doc[0].render(scale=dpi / 72.0, grayscale=True).to_numpy().copy()
+        return doc[0].render(scale=dpi / 72.0, grayscale=True).to_pil().convert("L")
     finally:
         doc.close()
 

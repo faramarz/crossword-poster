@@ -44,8 +44,6 @@ def run_crops(
     verbose: bool = True,
 ) -> int:
     """Check every letter cell's four strokes and the frame in each output PDF; write crop images. Returns 0/1."""
-    import numpy as np
-
     grid = grid or os.path.join(outroot, "grid.json")
     with open(grid, encoding="utf-8") as fh:
         g = json.load(fh)["grid"]
@@ -66,16 +64,19 @@ def run_crops(
             continue
         x0p, y0p, x1p, y1p = block.rect
         cell = block.w / cols / 72  # inches
-        im = pdfutil.render_gray(pdf, DPI).astype(int)
+        im = pdfutil.render_gray(pdf, DPI)
+        px = im.load()
         k = DPI / 72
         X0, Y0, X1, Y1 = x0p * k, y0p * k, x1p * k, y1p * k
         cp = cell * DPI
 
-        def dark(x, y, horizontal, im=im):
+        def dark(x, y, horizontal, px=px, size=im.size):
             x, y = int(round(x)), int(round(y))
+            if not (1 <= x < size[0] - 1 and 1 <= y < size[1] - 1):
+                return False
             if horizontal:  # a horizontal edge: look across it (vertical window)
-                return im[y - 1 : y + 2, x].min() < 110
-            return im[y, x - 1 : x + 2].min() < 110
+                return min(px[x, y - 1], px[x, y], px[x, y + 1]) < 110
+            return min(px[x - 1, y], px[x, y], px[x + 1, y]) < 110
 
         bad, badlist = 0, []
         for r, c in letters:
@@ -89,7 +90,7 @@ def run_crops(
                 bad += 1
                 badlist.append((r, c, top, bot, lef, rig))
         frame_gaps = 0
-        for t in np.linspace(0.02, 0.98, 60):
+        for t in (0.02 + 0.96 * i / 59 for i in range(60)):
             for x, y, horizontal in (
                 (X0 + t * (X1 - X0), Y0 - 1.5, True),
                 (X0 + t * (X1 - X0), Y1 + 1.5, True),
@@ -135,8 +136,8 @@ def _write_crops(out: str, name: str, im, box: tuple, cell: float) -> None:
         "right_mid": (X1, (Y0 + Y1) / 2),
     }
     pad = int(win) + 50
-    img = Image.new("L", (im.shape[1] + 2 * pad, im.shape[0] + 2 * pad), 255)
-    img.paste(Image.fromarray(im.astype("uint8"), "L"), (pad, pad))
+    img = Image.new("L", (im.width + 2 * pad, im.height + 2 * pad), 255)
+    img.paste(im, (pad, pad))
     tiles = []
     for key, (cx, cy) in pts.items():
         tile = img.crop(

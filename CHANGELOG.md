@@ -48,7 +48,7 @@ The first public release.
 - The bundled fonts, Archivo Narrow and Oswald, are under the SIL Open Font License 1.1, with their licence texts shipped in
   the package.
 - PDFs are read with `pypdf` and rendered with `pypdfium2`. The earlier AGPL dependency (PyMuPDF) is not used. No
-  dependency is copyleft. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+  Python dependency is copyleft. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 [Unreleased]: https://github.com/faramarz/crossword-poster/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/faramarz/crossword-poster/releases/tag/v1.0.0

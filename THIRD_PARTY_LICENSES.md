@@ -1,11 +1,16 @@
 # Third-party licences
 
 crossword-poster itself is released under the [MIT licence](LICENSE). This page lists everything it depends on or
-ships, with the licence of each. None of them is copyleft (no GPL / AGPL / LGPL), so you can use the tool and its
-output freely, including commercially.
+ships, with the licence of each. No Python package it depends on is itself GPL, AGPL or LGPL licensed.
+
+Binary wheels of some libraries (for example Pillow) bundle shared C libraries under their own licences, some
+of them copyleft (for example LGPL-2.1+ or GPL-3.0+ with the GCC runtime exception). Those wheels are installed from PyPI
+onto your computer; they are not distributed in this repository or in the crossword-poster package, so they place no
+obligation on this project or on the posters you make. Read each library's own licence file if you redistribute an
+environment that contains them.
 
 The previous PDF library, PyMuPDF (AGPL-3.0 / commercial), is **not** used any more: PDFs are inspected with `pypdf`
-and rasterised with `pypdfium2`.
+and rasterised with `pypdfium2`. NumPy is no longer a dependency either.
 
 ## Runtime dependencies (installed by `pip install crossword-poster`)
 
@@ -19,8 +24,7 @@ Checked with `pip-licenses` on a clean Python 3.13 environment (see `scripts/che
 | [typing_extensions](https://github.com/python/typing_extensions) (via pyee) | 4.16.0 | PSF-2.0 | typing backports |
 | [pypdf](https://github.com/py-pdf/pypdf) | 6.19.0 | BSD-3-Clause | PDF page sizes, fonts, vector colours, building the actual-size check page |
 | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 5.14.0 | BSD-3-Clause or Apache-2.0 (bundled PDFium: BSD-3-Clause / Apache-2.0, plus the permissive licences of its own dependencies such as FreeType, ICU, lcms, abseil) | PNG previews, text extraction, rasterised checks |
-| [Pillow](https://python-pillow.github.io) | 12.3.0 | MIT-CMU (HPND) | writing PNGs, crop montages |
-| [NumPy](https://numpy.org) | 2.5.3 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | pixel checks |
+| [Pillow](https://python-pillow.github.io) | 12.3.0 | MIT-CMU (HPND) | reading rasterised pages, writing PNGs, crop montages and pixel checks |
 
 ## Optional and development-only
 
@@ -28,7 +32,8 @@ Not installed by default and never redistributed with the package.
 
 | Package | Licence | When |
 |---|---|---|
-| [openpyxl](https://openpyxl.readthedocs.io) and et_xmlfile | MIT | reading `.xlsx` clue files (`pip install "crossword-poster[xlsx]"`) |
+| [openpyxl](https://openpyxl.readthedocs.io), et_xmlfile | MIT | reading `.xlsx` clue files (`pip install "crossword-poster[xlsx]"`) |
+| [defusedxml](https://github.com/tiran/defusedxml) | PSF-2.0 | makes openpyxl refuse malicious XML (installed with the `xlsx` extra) |
 | [pytest](https://pytest.org) | MIT | tests (`[dev]`) |
 | [ruff](https://github.com/astral-sh/ruff) | MIT | lint and format (`[dev]`) |
 | [build](https://github.com/pypa/build) | MIT | building the wheel (`[dev]`) |
@@ -57,4 +62,5 @@ the OFL does not restrict documents created with the fonts.
 ## Keeping this file accurate
 
 Run `scripts/check_licenses.sh` after changing dependencies; it installs the package into a throw-away environment
-and prints the licence of every installed distribution. A dependency that is GPL / AGPL / LGPL must not be added.
+and prints the licence of every installed distribution. A Python dependency that is GPL / AGPL / LGPL must not be added.
+The script only sees package-level metadata, not the shared libraries inside binary wheels (see the note at the top).

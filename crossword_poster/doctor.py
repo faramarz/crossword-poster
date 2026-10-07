@@ -15,7 +15,6 @@ REQUIRED = (
     ("playwright", "playwright"),
     ("pypdf", "pypdf"),
     ("pypdfium2", "pypdfium2"),
-    ("numpy", "numpy"),
     ("Pillow", "PIL"),
 )
 

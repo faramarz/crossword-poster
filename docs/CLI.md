@@ -149,8 +149,9 @@ the only one supported.
 The printed length is added at the end of each clue.
 
 - A single word gets `(n)`, such as `(7)`.
-- A multi-word answer gets a list of word lengths, such as `(3,3)` for `Big Ben`. Words are split at spaces, hyphens,
-  apostrophes and other punctuation. This means `O'Brien` is printed as `(1,5)` and `Mary-Anne's` as `(4,4,1)`. To print
+- A multi-word answer gets a list of word lengths, such as `(3,3)` for `Big Ben`. Only spaces separate words.
+  Apostrophes and other punctuation inside a word are not counted, so `O'Brien` is a single word of six letters and gets
+  `(6)`. A hyphenated word keeps its hyphens: `Mother-in-law` is `(6-2-3)`, and `Well-known cake` is `(4-5,4)`. To print
   a different length, add an `enumeration` column (for example `6`).
 - If the clue already ends with a length such as `(5,3)` and the total is right, it is kept as you wrote it. If the
   total is wrong, the tool corrects it and prints a warning.
@@ -383,7 +384,7 @@ Real output on a working machine:
 crossword-poster 1.0.0: checking this computer
 
   [ok] Python 3.13.16 (needs 3.9 or newer)
-  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, numpy 2.5.3, Pillow 12.3.0
+  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
   [ok] Bundled fonts found (Archivo Narrow, Oswald)
   [ok] Chromium 141.0.7390.37
 
@@ -396,7 +397,7 @@ And with Chromium missing:
 crossword-poster 1.0.0: checking this computer
 
   [ok] Python 3.13.16 (needs 3.9 or newer)
-  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, numpy 2.5.3, Pillow 12.3.0
+  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
   [ok] Bundled fonts found (Archivo Narrow, Oswald)
   [FAIL] Chromium could not start: Chromium (the browser used to print the poster) was not found or could not start.
          Fix: run `python -m playwright install chromium` (or set CROSSWORD_POSTER_CHROMIUM to the path of a Chromium/Chrome executable)

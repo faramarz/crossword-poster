@@ -20,5 +20,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The bundled fonts in fonts/ are NOT covered by this licence; each family is
-distributed under the SIL Open Font License 1.1 (see fonts/<Family>/OFL.txt).
+The bundled fonts in crossword_poster/fonts/ are NOT covered by this licence; each family is
+distributed under the SIL Open Font License 1.1 (see crossword_poster/fonts/<Family>/OFL.txt).

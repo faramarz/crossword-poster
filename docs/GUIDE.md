@@ -380,7 +380,7 @@ crossword-poster doctor
 crossword-poster 1.0.0: checking this computer
 
   [ok] Python 3.13.16 (needs 3.9 or newer)
-  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, numpy 2.5.3, Pillow 12.3.0
+  [ok] crossword-poster 1.0.0 imports; libraries: playwright 1.63.0, pypdf 6.19.0, pypdfium2 5.14.0, Pillow 12.3.0
   [ok] Bundled fonts found (Archivo Narrow, Oswald)
   [ok] Chromium 141.0.7390.37
 

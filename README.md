@@ -167,14 +167,14 @@ the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md
 The code is released under the [MIT licence](LICENSE). The bundled fonts, Archivo Narrow and Oswald, are licensed under
 the SIL Open Font License 1.1 (OFL), which allows use in printed work and in your posters. Their licence texts are in
 [`crossword_poster/fonts/`](crossword_poster/fonts/README.md). Dependencies are listed in
-[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md); none is copyleft.
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md); none of the Python packages it depends on is copyleft.
 
 ## Acknowledgements
 
 Thanks to everyone who sent in clues for the first poster, and to the people who proofread it. Thanks also to the
 projects this tool stands on: [Playwright](https://playwright.dev/) and Chromium for layout and printing,
 [pypdf](https://github.com/py-pdf/pypdf) and [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) for PDF work,
-[Pillow](https://python-pillow.github.io) and [NumPy](https://numpy.org) for images, and the designers of
+[Pillow](https://python-pillow.github.io) for images, and the designers of
 [Archivo Narrow](https://github.com/Omnibus-Type/ArchivoNarrow) and [Oswald](https://github.com/googlefonts/OswaldFont).
 
 Made by Faramarz ([@faramarz](https://github.com/faramarz)).
