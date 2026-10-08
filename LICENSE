@@ -1,4 +1,4 @@
-Required Notice: Copyright (c) 2026 Faramarz (https://github.com/faramarz/crossword-poster)
+Required Notice: Copyright (c) 2026 Faramarz Hashemi (https://github.com/faramarz/crossword-poster)
 Required Notice: Posters, PDFs and images you make with this software for a noncommercial purpose are yours to keep, print and share, and paying a print shop to print them is fine. Making posters for paying customers is commercial use; for a commercial licence, write to gm@faramarz.xyz.
 
 # PolyForm Noncommercial License 1.0.0
@@ -136,4 +136,5 @@ of your licenses.
 ---
 
 The bundled fonts in crossword_poster/fonts/ are NOT covered by this licence; each family is
-distributed under the SIL Open Font License 1.1 (see crossword_poster/fonts/<Family>/OFL.txt).
+distributed under the SIL Open Font License 1.1 (see crossword_poster/fonts/ArchivoNarrow/OFL.txt
+and crossword_poster/fonts/Oswald/OFL.txt).
