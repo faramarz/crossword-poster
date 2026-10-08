@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "PolyForm-Noncommercial-1.0.0"
 license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
-authors = [{ name = "Faramarz", email = "gm@faramarz.xyz" }]
+authors = [{ name = "Faramarz Hashemi", email = "gm@faramarz.xyz" }]
 keywords = ["crossword", "poster", "puzzle", "pdf", "birthday", "gift", "print", "playwright"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
