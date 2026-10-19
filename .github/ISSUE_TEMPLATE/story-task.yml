@@ -1,0 +1,37 @@
+name: Story / Task
+description: Buildable work. Completing every required field makes it agent-ready.
+labels: ["source:human"]
+body:
+  - type: markdown
+    attributes:
+      value: "Each section maps to goal.yaml. Spec: docs/superpowers/specs/2026-10-18-github-delivery-board-and-agent-factory-design.md (section 6)."
+  - type: input
+    id: goal
+    attributes: {label: Goal, description: "One sentence: the outcome."}
+    validations: {required: true}
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: "2-5 binary checks, each as metric, threshold, command."
+      placeholder: "- p95 render < 500ms: `npm run bench:render` exits 0"
+    validations: {required: true}
+  - type: textarea
+    id: verify
+    attributes: {label: Verification commands, description: "Commands that exist in the repo; each must fail on the current code.", render: bash}
+    validations: {required: true}
+  - type: textarea
+    id: paths
+    attributes: {label: Paths in scope, description: "Globs. Anything outside is out of scope."}
+    validations: {required: true}
+  - type: textarea
+    id: out_of_scope
+    attributes: {label: Out of scope}
+    validations: {required: true}
+  - type: dropdown
+    id: design
+    attributes: {label: Design needed, options: ["No", "Yes"]}
+    validations: {required: true}
+  - type: textarea
+    id: proof
+    attributes: {label: Proof artifacts, description: "Optional: screenshots or reports the run must produce."}
