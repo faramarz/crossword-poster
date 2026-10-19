@@ -1,0 +1,19 @@
+name: Bug
+description: Something is broken.
+labels: ["type:fix", "source:human"]
+body:
+  - type: textarea
+    id: repro
+    attributes: {label: Steps to reproduce}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: Expected vs actual}
+    validations: {required: true}
+  - type: dropdown
+    id: severity
+    attributes: {label: Severity, options: ["S1 outage", "S2 major", "S3 minor", "S4 cosmetic"]}
+    validations: {required: true}
+  - type: textarea
+    id: verify
+    attributes: {label: Verification commands, description: "A command that fails while the bug exists.", render: bash}
