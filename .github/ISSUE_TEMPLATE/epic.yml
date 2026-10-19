@@ -1,0 +1,15 @@
+name: Epic
+description: An outcome made of sub-issues; drives the Roadmap.
+labels: ["epic", "source:human"]
+body:
+  - type: input
+    id: outcome
+    attributes: {label: Outcome}
+    validations: {required: true}
+  - type: input
+    id: window
+    attributes: {label: Target window, description: "e.g. 2026-11-01 to 2026-12-15 (set Start/Target date on the board)"}
+    validations: {required: true}
+  - type: textarea
+    id: children
+    attributes: {label: Planned sub-issues}

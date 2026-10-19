@@ -1,0 +1,11 @@
+name: Idea (wishlist)
+description: No commitment. Lands in Backlog with Horizon = Wishlist.
+labels: ["source:human"]
+body:
+  - type: input
+    id: idea
+    attributes: {label: Idea}
+    validations: {required: true}
+  - type: textarea
+    id: why
+    attributes: {label: Why it matters}
