@@ -39,7 +39,7 @@ dependencies = [
 xlsx = ["openpyxl>=3.1", "defusedxml>=0.7"]
 dev = [
     "pytest>=7.4",
-    "ruff>=0.16,<0.17",
+    "ruff>=0.16,<0.18",
     "build>=1.0",
     "twine>=5.0",
     "openpyxl>=3.1",
