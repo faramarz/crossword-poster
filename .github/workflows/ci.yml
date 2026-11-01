@@ -67,7 +67,7 @@ jobs:
       - name: Build the sample poster
         run: crossword-poster sample --out sample-out --size 24x36
       - name: Upload the PDFs and PNGs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: sample-poster
           path: |
